@@ -1,322 +1,653 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Display V26 - Calendar & Timer Fixed</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <style>
-        @font-face { font-family: 'DefaultEn'; src: url('WRCCleanBold.ttf'); }
-        @font-face { font-family: 'DefaultJa'; src: url('ロゴタイプゴシック.otf'); }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>多機能スマートディスプレイ</title>
+  <style>
+    /* 変数定義 */
+    :root {
+      --font-ja: sans-serif;
+      --main-color: #d9661a; 
+    }
 
-        :root {
-            --bg-color: #0f0f0f; --panel-bg: #1a1a1a;
-            --text-color: #ffffff; --accent-color: #e65100;
-            --timer-height: 85px;
-        }
+    body {
+      margin: 0; padding: 0; font-family: sans-serif;
+      background-color: #2b2b2b; color: var(--main-color); overflow: hidden;
+    }
 
-        body {
-            margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-color);
-            font-family: 'DefaultJa', sans-serif; overflow: hidden; height: 100vh;
-        }
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1.2fr 1.5fr 1.5fr 80px; 
+      gap: 20px; padding: 25px; height: 100vh; box-sizing: border-box;
+    }
 
-        .font-en { font-family: 'CustomEn', 'DefaultEn', sans-serif !important; }
-        .font-ja { font-family: 'CustomJa', 'DefaultJa', sans-serif !important; }
+    /* ウィジェット・モーダル共通設定 */
+    .widget, .modal-widget {
+      background-color: rgba(40, 40, 40, 0.4); 
+      border: 1px solid rgba(100, 150, 180, 0.3);
+      border-radius: 16px; position: relative; overflow: hidden;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .widget-header {
+      position: absolute; top: 8px; left: 15px; font-size: 0.8rem;
+      font-weight: normal; opacity: 0.6; pointer-events: none; letter-spacing: 2px; z-index: 10;
+      color: var(--main-color); text-transform: uppercase;
+    }
 
-        .dashboard {
-            display: grid; grid-template-columns: 1.1fr 1.4fr; gap: 15px; padding: 15px;
-            padding-bottom: calc(15px + var(--timer-height) + 10px);
-            height: 100vh; box-sizing: border-box;
-        }
+    /* 中身の表示制御 */
+    .widget-content, .modal-inner {
+      width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+      padding: 30px 20px 15px 20px; box-sizing: border-box;
+      opacity: 0; 
+      transition: opacity 0s; 
+      will-change: opacity; /* 描画最適化 */
+    }
+    .show-content { opacity: 1 !important; }
 
-        .left-col { display: flex; flex-direction: column; gap: 15px; overflow: hidden; }
-        #memo-panel { flex: 1; background: #111; }
-        #cal-panel { flex: 2; display: flex; flex-direction: column; overflow: hidden; }
-        .right-col { display: grid; grid-template-rows: 140px 1fr 1fr; gap: 15px; overflow: hidden; }
+    /* 幕アニメーション (GPUアクセラレーションで超軽量化) */
+    .widget::after, .modal-widget::after {
+      content: ''; position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; background-color: var(--main-color); z-index: 50;
+      transform: translateX(-100%);
+      will-change: transform;
+    }
+    .widget.animating::after, .modal-widget.animating::after { animation: sweepCurtain 1.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    .widget.animating-fast::after, .modal-widget.animating-fast::after { animation: sweepCurtain 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+    
+    @keyframes sweepCurtain { 
+      0% { transform: translateX(-100%); } 
+      40%, 60% { transform: translateX(0%); } 
+      100% { transform: translateX(100%); } 
+    }
 
-        .panel { background-color: var(--panel-bg); border-radius: 16px; position: relative; border: 1px solid #2a2a2a; overflow: hidden; }
-        .panel-header { position: absolute; top: 10px; left: 20px; font-size: 0.7rem; font-weight: 900; color: var(--accent-color); letter-spacing: 2px; z-index: 5; }
+    /* 時計 */
+    .clock { grid-column: 1; grid-row: 1; border: none; background: transparent; box-shadow: none; padding: 0; }
+    .clock .widget-content { flex-direction: column; align-items: flex-start; padding-left: 20px; justify-content: center; }
+    #clock-display { font-size: 6rem; font-weight: bold; font-variant-numeric: tabular-nums; line-height: 1; margin-bottom: 10px; text-shadow: 2px 2px 10px rgba(0,0,0,0.3); color: var(--main-color); }
+    #date-display { font-size: 1.6rem; font-weight: normal; opacity: 0.8; color: var(--main-color); }
 
-        /* Animation Curtain */
-        .curtain { position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background-color: var(--accent-color); z-index: 100; pointer-events: none; }
-        @keyframes sweep { 0% { left: -100%; } 50% { left: 0; } 100% { left: 100%; } }
-        .animating .curtain { animation: sweep 0.8s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
+    /* メディアプレイヤー */
+    .media { grid-column: 2; grid-row: 1 / 4; padding: 0; } 
+    .media .widget-content { padding: 0; }
+    .media-placeholder { font-size: 1.5rem; opacity: 0.5; font-weight: bold; letter-spacing: 2px; text-align: center; }
+    #media-image-display { width: 100%; height: 100%; object-fit: cover; border-radius: 16px; display: none; }
 
-        /* Clock & Media */
-        #clock-panel { display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        #time { font-size: clamp(2.5rem, 5vw, 3.8rem); font-weight: 800; color: var(--accent-color); line-height: 1; }
-        #date { font-size: 1.1rem; color: #777; margin-top: 5px; letter-spacing: 2px; }
-        #media-panel { cursor: pointer; background: #000; }
-        #media-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
-        .mode-contain img, .mode-contain video { width: 100%; height: 100%; object-fit: contain; }
-        .mode-cover img, .mode-cover video { width: 100%; height: 100%; object-fit: cover; }
+    /* 一般ニュース */
+    .news { grid-column: 1; grid-row: 2; align-items: flex-start; justify-content: flex-start; }
+    .news-layout { display: flex; width: 100%; height: 100%; text-align: left; align-items: center; justify-content: space-between; }
+    .news-text-area { flex: 1; padding-right: 15px; display: flex; flex-direction: column; justify-content: center; }
+    .news-preview { font-size: 0.75rem; opacity: 0.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 4px 0; }
+    .news-title { font-size: 1.1rem; font-weight: bold; line-height: 1.4; margin: 5px 0; color: var(--main-color); }
+    .news-desc { font-size: 0.85rem; opacity: 0.8; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .news-qr-area { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 110px; }
+    .news-qr-area img { width: 100px; height: 100px; border: 2px solid var(--main-color); border-radius: 8px; background: #fff; padding: 3px; }
+    .news-qr-area span { font-size: 0.6rem; margin-top: 6px; text-align: center; font-weight: normal; opacity: 0.8;}
 
-        /* News */
-        .news-content { height: 100%; display: flex; padding: 40px 20px 15px 20px; gap: 20px; box-sizing: border-box; align-items: center; }
-        #news-text-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        #news-title { font-size: 1.2rem; font-weight: 900; color: #fff; margin-bottom: 6px; }
-        #news-body { font-size: 0.95rem; color: #ccc; line-height: 1.4; flex-grow: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
-        .qr-wrapper { background: white; padding: 5px; border-radius: 4px; width: 80px; height: 80px; flex-shrink: 0; }
+    /* 天気 */
+    .weather { grid-column: 1; grid-row: 3; }
+    #weather-display { display: flex; width: 100%; height: 100%; justify-content: center; align-items: center; flex-direction: row; }
+    .weather-today { display: flex; flex-direction: column; align-items: center; font-size: 1.5rem; font-weight: 300; }
+    .weather-today .icon { font-size: 3.5rem; margin: 5px 0; }
+    .weather-5days { display: flex; gap: 8px; justify-content: center; width: 100%; }
+    .weather-day {
+      display: flex; flex-direction: column; align-items: center; font-size: 0.8rem;
+      background: rgba(255, 255, 255, 0.03); padding: 8px 10px; border-radius: 12px; flex: 1;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .weather-day span { margin: 2px 0; white-space: nowrap; }
 
-        /* Calendar */
-        #cal-events { padding: 40px 20px 20px 20px; overflow-y: auto; height: 100%; display: flex; flex-direction: column; gap: 10px; }
-        .cal-item { background: #222; padding: 12px; border-radius: 8px; border-left: 4px solid var(--accent-color); }
-        .cal-date { font-size: 0.75rem; color: #aaa; margin-bottom: 3px; }
-        .cal-title { font-size: 1rem; font-weight: bold; color: #fff; }
+    .ja-number { font-family: var(--font-ja); }
 
-        /* Memo */
-        #memo-canvas { width: 100%; height: 100%; touch-action: none; }
-        .memo-tools { position: absolute; bottom: 10px; left: 10px; display: flex; gap: 10px; z-index: 150; }
-        .tool-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-color); border: none; color: white; cursor: pointer; }
+    /* タイマー表示部 */
+    .timer-wrapper {
+      grid-column: 1 / 3; grid-row: 4; display: flex; justify-content: center; align-items: center;
+      height: 100%; width: 100%; transition: all 0.5s ease; opacity: 0; pointer-events: none; transform: translateY(10px);
+    }
+    .timer-wrapper.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .timer { width: 350px; height: 70px; border: 2px solid var(--main-color); background-color: rgba(30, 30, 30, 0.9); border-radius: 35px; }
+    .timer .widget-content { padding: 0; }
+    #timer-display { font-size: 3.5rem; font-weight: bold; font-variant-numeric: tabular-nums; letter-spacing: 2px; color: var(--main-color); }
 
-        /* Timer Bar with Progress and Cancel */
-        #timer-bar {
-            position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 700px; height: var(--timer-height);
-            background: #1a1a1a; border-radius: 12px; border: 1px solid #333;
-            display: flex; align-items: center; justify-content: center;
-            z-index: 500; overflow: hidden; opacity: 0; visibility: hidden; transition: 0.4s;
-        }
-        #timer-bar.show-state { opacity: 1; visibility: visible; }
-        #timer-progress-bg { position: absolute; top: 0; left: 0; height: 100%; width: 100%; background: var(--accent-color); opacity: 0.25; transform: scaleX(1); transform-origin: left; z-index: 0; transition: transform 1s linear; }
-        #timer-display { font-size: 3.5rem; font-weight: 900; color: #fff; z-index: 1; }
-        #timer-cancel { position: absolute; right: 20px; background: rgba(255,255,255,0.1); border: none; color: #ff6666; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; z-index: 2; }
-
-        /* Controls */
-        .controls { position: fixed; bottom: 15px; right: 15px; display: flex; gap: 8px; z-index: 400; }
-        .controls button { background: #222; border: 1px solid #444; color: white; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; }
-        
-        dialog { background: #1e1e1e; color: white; border: none; border-radius: 16px; padding: 25px; width: 90%; max-width: 450px; }
-        input, select { width: 100%; padding: 10px; background: #111; color: white; border: 1px solid #444; border-radius: 8px; margin-top: 5px; }
-        .file-label { display: inline-block; background: #333; padding: 8px; border-radius: 6px; width: 45%; text-align: center; cursor: pointer; font-size: 0.8rem; }
-    </style>
+    /* フローティングボタン & モーダル */
+    .floating-controls { position: fixed; bottom: 35px; right: 25px; display: flex; gap: 15px; z-index: 100; }
+    .floating-controls button {
+      background: rgba(30, 30, 30, 0.6); color: var(--main-color); border: 1px solid rgba(100, 150, 180, 0.4); backdrop-filter: blur(5px);
+      padding: 10px 20px; font-size: 0.9rem; font-weight: bold; border-radius: 30px; cursor: pointer; transition: all 0.2s;
+    }
+    .floating-controls button:hover { background: rgba(100, 150, 180, 0.2); }
+    
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(3px);
+      display: none; align-items: center; justify-content: center; z-index: 1000; opacity: 0; transition: opacity 0.3s;
+    }
+    .modal-overlay.active { display: flex; opacity: 1; }
+    .modal-widget {
+      background: #2b2b2b; border: 1px solid rgba(100, 150, 180, 0.3); border-radius: 16px; padding: 0; width: 450px;
+      max-width: 90%; color: var(--main-color); position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    .modal-inner { flex-direction: column; width: 100%; max-height: 80vh; overflow-y: auto; padding: 25px 30px; }
+    .modal-widget h2 { margin-top: 0; border-bottom: 1px solid rgba(100, 150, 180, 0.3); padding-bottom: 10px; font-weight: normal; width: 100%; }
+    .close-btn { position: absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: var(--main-color); opacity: 0.7; z-index: 60;}
+    .modal-row { margin-bottom: 15px; width: 100%; }
+    /* Androidで選択できないバグ回避のため input[type=file] の accept を削除・変更 */
+    .modal-row input[type="number"], .modal-row input[type="time"], .modal-row input[type="color"], .modal-row input[type="file"] { 
+      background: rgba(0,0,0,0.3); border: 1px solid rgba(100, 150, 180, 0.3); color: var(--main-color); padding: 8px; border-radius: 6px; 
+    }
+    .modal-row input[type="number"] { width: 60px; }
+    .action-btn { background: var(--main-color); color: #fff; border: none; padding: 12px 20px; font-size: 1rem; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; }
+    .timer-section { border: 1px dashed rgba(100,150,180,0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px; width: 100%; box-sizing: border-box;}
+    .timer-section h3 { margin-top: 0; font-size: 0.9rem; opacity: 0.8; }
+  </style>
 </head>
-<body onclick="document.getElementById('tool-box').classList.remove('open')">
+<body>
 
-<div class="dashboard">
-    <div class="left-col">
-        <div id="memo-panel" class="panel">
-            <canvas id="memo-canvas"></canvas>
-            <div class="memo-tools" onclick="event.stopPropagation()">
-                <button class="tool-btn" onclick="document.getElementById('tool-box').classList.toggle('open')">🖋️</button>
-                <div id="tool-box" style="display:none; gap:10px; background:#2a2a2a; padding:5px 15px; border-radius:20px;">
-                    <button onclick="pMode='draw';pCol='#fff'" style="background:#fff; width:20px; height:20px; border-radius:50%; border:none;"></button>
-                    <button onclick="pMode='eraser'" style="background:none; border:none; color:white;">🧽</button>
-                    <button onclick="clearMemo()" style="background:none; border:none; color:red;">CLR</button>
-                </div>
-            </div>
-        </div>
-        <div id="cal-panel" class="panel">
-            <div class="panel-header font-en">CALENDAR / SCHEDULE</div>
-            <div class="curtain"></div>
-            <div id="cal-events" class="font-ja"></div>
-        </div>
+  <div class="grid-container">
+
+    <div class="widget clock" id="widget-clock">
+      <div class="widget-content">
+        <div id="clock-display">00:00:00</div>
+        <div id="date-display">Date Loading...</div>
+      </div>
     </div>
 
-    <div class="right-col">
-        <div id="clock-panel" class="panel"><div id="time" class="font-en">00:00</div><div id="date" class="font-en">LOADING...</div></div>
-        <div id="media-panel" class="panel" onclick="handleMediaClick()">
-            <div id="media-container" class="mode-contain"><div style="color:#444;">TAP TO LOAD MEDIA</div></div>
-            <input type="file" id="media-input" style="display:none" accept="image/*,video/*">
-        </div>
-        <div id="news-panel" class="panel">
-            <div class="panel-header font-en">LATEST NEWS</div>
-            <div class="curtain"></div>
-            <div class="news-content">
-                <div id="news-text-area">
-                    <div id="news-title" class="font-ja">Loading news...</div>
-                    <div id="news-body" class="font-ja">Please wait while fetching updates.</div>
-                </div>
-                <div class="qr-wrapper"><div id="news-qr"></div></div>
-            </div>
-        </div>
+    <div class="widget media" id="widget-media">
+      <div class="widget-header" style="z-index: 30; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);">MEDIA PLAYER</div>
+      <div class="widget-content">
+        <div class="media-placeholder" id="media-placeholder-text">NO MEDIA PLAYING<br><span style="font-size: 0.8rem; font-weight:normal;">設定から画像を選択してください</span></div>
+        <img id="media-image-display" src="" alt="Media Image">
+      </div>
     </div>
-</div>
 
-<div id="timer-bar">
-    <div id="timer-progress-bg"></div>
-    <div id="timer-display" class="font-en">00:00:00</div>
-    <button id="timer-cancel" onclick="cancelTimer()">×</button>
-</div>
-
-<div class="controls">
-    <button onclick="document.getElementById('timer-dlg').showModal()">⏳</button>
-    <button onclick="document.getElementById('settings-dlg').showModal()">⚙️</button>
-</div>
-
-<dialog id="settings-dlg">
-    <h3 class="font-en">SETTINGS</h3>
-    <label class="font-en" style="font-size:0.7rem;">iCal URL (Google Calendar)</label>
-    <input type="text" id="ical-url" placeholder="https://...">
-    <label class="font-en" style="font-size:0.7rem;">THEME COLOR</label>
-    <input type="color" id="set-color" value="#e65100">
-    <div style="margin-top:15px;">
-        <label class="file-label">EN Font<input type="file" id="f-en" hidden onchange="saveFont(this, 'En')"></label>
-        <label class="file-label">JA Font<input type="file" id="f-ja" hidden onchange="saveFont(this, 'Ja')"></label>
+    <div class="widget news" id="widget-news">
+      <div class="widget-header">LATEST NEWS</div>
+      <div class="widget-content">
+        <div class="news-layout">
+          <div class="news-text-area">
+            <div class="news-preview" id="news-prev-title">Prev: ...</div>
+            <div id="news-title" class="news-title">Loading News...</div>
+            <div id="news-desc" class="news-desc"></div>
+            <div class="news-preview" id="news-next-title">Next: ...</div>
+          </div>
+          <div class="news-qr-area">
+            <img id="news-qr" src="" alt="QR" style="display:none;">
+            <span id="news-qr-text" style="display:none;">Read More</span>
+          </div>
+        </div>
+      </div>
     </div>
-    <button onclick="saveSettings()" style="width:100%; margin-top:20px; background:var(--accent-color); border:none; padding:10px; color:white; border-radius:8px;">SAVE</button>
-</dialog>
 
-<dialog id="timer-dlg">
-    <h3 class="font-en">SET TIMER</h3>
-    <input type="number" id="t-min" value="3" placeholder="Minutes">
-    <button onclick="startTimer()" style="width:100%; margin-top:15px; background:var(--accent-color); border:none; padding:15px; color:white; border-radius:8px;">START WITH ANIMATION</button>
-</dialog>
+    <div class="widget weather" id="widget-weather">
+      <div class="widget-header">WEATHER - <span id="weather-loc-name">Loading Location...</span></div>
+      <div class="widget-content" id="weather-display">
+        Please set location in SETTINGS.
+      </div>
+    </div>
 
-<script>
-    // --- Core Variables ---
-    const DB_NAME = 'SmartDisplayDB_V26';
-    let pCol = '#ffffff', pMode = 'draw', timerIdx = null;
+    <div class="timer-wrapper" id="timer-wrapper">
+      <div class="widget timer" id="widget-timer">
+        <div class="widget-content">
+          <div id="timer-display">00:00:00</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    // --- News Logic (Fixed Text Extraction) ---
-    let newsList = []; let newsIdx = 0;
-    async function fetchNews() {
-        try {
-            const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://news.yahoo.co.jp/rss/topics/top-picks.xml?t='+Date.now())}`);
-            const data = await res.json();
-            const xml = new DOMParser().parseFromString(data.contents, "text/xml");
-            newsList = Array.from(xml.querySelectorAll("item"));
-            showNextNews();
-        } catch(e) { console.error("News Load Error", e); }
-    }
-    function showNextNews() {
-        if(newsList.length === 0) return;
-        const panel = document.getElementById('news-panel');
-        panel.classList.remove('animating'); void panel.offsetWidth; panel.classList.add('animating');
-        setTimeout(() => {
-            const item = newsList[newsIdx];
-            document.getElementById('news-title').textContent = item.querySelector("title").textContent;
-            let body = item.querySelector("description") ? item.querySelector("description").textContent : "No details available.";
-            document.getElementById('news-body').textContent = body.replace(/<[^>]*>?/gm, '').substring(0, 100) + "...";
-            const qrEl = document.getElementById('news-qr'); qrEl.innerHTML = "";
-            new QRCode(qrEl, { text: item.querySelector("link").textContent, width: 80, height: 80 });
-            newsIdx = (newsIdx + 1) % newsList.length;
-        }, 400);
-    }
+  <div class="floating-controls">
+    <button onclick="openModal('timer-modal', 'timer-modal-widget')">TIMER</button>
+    <button onclick="openModal('settings-modal', 'settings-modal-widget')">SETTINGS</button>
+  </div>
 
-    // --- iCal Calendar Logic (Fixed Logic) ---
-    async function fetchCalendar() {
-        const url = document.getElementById('ical-url').value; if(!url) return;
-        const panel = document.getElementById('cal-panel');
-        panel.classList.remove('animating'); void panel.offsetWidth; panel.classList.add('animating');
-        try {
-            const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-            const data = await res.json();
-            const events = parseICS(data.contents);
-            renderCalendar(events);
-        } catch(e) { console.error("Calendar Load Error", e); }
-    }
-    function parseICS(str) {
-        const events = []; const lines = str.split(/\r?\n/); let cur = null;
-        for(let line of lines) {
-            if(line.startsWith('BEGIN:VEVENT')) cur = {};
-            else if(line.startsWith('END:VEVENT')) { if(cur.start) events.push(cur); cur = null; }
-            else if(cur) {
-                if(line.startsWith('SUMMARY:')) cur.title = line.slice(8);
-                if(line.startsWith('DTSTART')) {
-                    const match = line.match(/:(\d{8}(T\d{6}Z?)?)/);
-                    if(match) {
-                        const s = match[1];
-                        cur.start = new Date(s.slice(0,4), s.slice(4,6)-1, s.slice(6,8));
-                    }
-                }
-            }
+  <div class="modal-overlay" id="timer-modal">
+    <div class="modal-widget" id="timer-modal-widget">
+      <div class="modal-inner">
+        <span class="close-btn" onclick="closeModal('timer-modal', 'timer-modal-widget')">&times;</span>
+        <h2>TIMER SETTINGS</h2>
+        <div class="timer-section">
+          <h3>1. 期間を設定して開始</h3>
+          <div class="modal-row">
+            <input type="number" id="timer-h" value="0" min="0" onchange="saveSettings()"> h &nbsp;
+            <input type="number" id="timer-m" value="3" min="0" onchange="saveSettings()"> m &nbsp;
+            <input type="number" id="timer-s" value="0" min="0" onchange="saveSettings()"> s
+          </div>
+          <button class="action-btn" onclick="startTimerDuration()">START DURATION</button>
+        </div>
+        <div class="timer-section">
+          <h3>2. 終了時刻を設定して開始</h3>
+          <div class="modal-row">
+            <input type="time" id="timer-until" value="12:00" style="font-size:1.2rem; width:120px;" onchange="saveSettings()"> まで
+          </div>
+          <button class="action-btn" onclick="startTimerUntil()">START UNTIL TIME</button>
+        </div>
+        <button class="action-btn" onclick="stopTimer()" style="background:rgba(255,255,255,0.1); color:#fff; margin-top:5px;">STOP TIMER</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal-widget" id="settings-modal-widget">
+      <div class="modal-inner">
+        <span class="close-btn" onclick="closeModal('settings-modal', 'settings-modal-widget')">&times;</span>
+        <h2>SETTINGS</h2>
+        
+        <h3 style="font-size:1rem; border-bottom:1px solid rgba(100,150,180,0.3); padding-bottom:5px; width:100%;">THEME COLOR</h3>
+        <div class="modal-row" style="display:flex; align-items:center; gap:10px;">
+          <input type="color" id="main-color-picker" value="#d9661a" style="width:50px; height:40px; padding:0; cursor:pointer;" onchange="updateMainColor(this.value); saveSettings();">
+          <button onclick="resetMainColor()" style="background:transparent; border:1px solid var(--main-color); color:var(--main-color); padding:8px 15px; border-radius:5px; cursor:pointer;">Reset Default</button>
+        </div>
+
+        <h3 style="margin-top:20px; font-size:1rem; border-bottom:1px solid rgba(100,150,180,0.3); padding-bottom:5px; width:100%;">MEDIA PLAYER</h3>
+        <p style="font-size: 0.75rem; margin-top: 0; opacity: 0.8;">※複数選択可能。ランダムで切り替わります。</p>
+        <div class="modal-row">
+          <input type="file" id="media-upload" multiple style="width: 100%;">
+        </div>
+        <div class="modal-row">
+          <label>切り替え頻度 (秒): <input type="number" id="media-interval" value="60" min="5" onchange="updateMediaInterval()"></label>
+        </div>
+
+        <h3 style="margin-top:20px; font-size:1rem; border-bottom:1px solid rgba(100,150,180,0.3); padding-bottom:5px; width:100%;">LOCATION (WEATHER)</h3>
+        <div class="modal-row">
+          <label>Lat: <input type="number" id="lat-input" value="35.6895" step="0.0001" onchange="saveSettings()"></label>
+        </div>
+        <div class="modal-row">
+          <label>Lon: <input type="number" id="lon-input" value="139.6917" step="0.0001" onchange="saveSettings()"></label>
+        </div>
+        <button class="action-btn" style="padding:8px;" onclick="fetchLocationAndWeather(); closeModal('settings-modal', 'settings-modal-widget');">UPDATE WEATHER</button>
+        
+        <h3 style="margin-top:20px; font-size:1rem; border-bottom:1px solid rgba(100,150,180,0.3); padding-bottom:5px; width:100%;">FONTS</h3>
+        <p style="font-size: 0.75rem; margin-top: 0; opacity: 0.8;">※Android軽量化のため、フォントは再起動時にリセットされます。</p>
+        <div class="modal-row" style="font-size: 0.9rem;">
+          <label style="display:block; margin-bottom:10px; opacity:0.9;">English Font:<br><input type="file" id="font-upload-en" style="width: 100%; margin-top:5px;"></label>
+          <label style="display:block; margin-top:15px; opacity:0.9;">Japanese Font (数字適用):<br><input type="file" id="font-upload-ja" style="width: 100%; margin-top:5px;"></label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- 幕アニメーション (超軽量版) ---
+    function triggerCurtain(elementId, onCover, onComplete, isFast = false, isHide = false) {
+      const el = document.getElementById(elementId);
+      if (!el || el.classList.contains('animating') || el.classList.contains('animating-fast')) {
+        if(onCover) onCover();
+        if(onComplete) onComplete();
+        return;
+      }
+      
+      const animClass = isFast ? 'animating-fast' : 'animating';
+      const duration = isFast ? 600 : 1200; 
+      const halfTime = duration / 2;
+
+      el.classList.add(animClass);
+      
+      setTimeout(() => { 
+        if (onCover) onCover(); 
+        const content = el.querySelector('.widget-content, .modal-inner');
+        if (content) {
+          if (isHide) content.classList.remove('show-content');
+          else content.classList.add('show-content');
         }
-        return events.sort((a,b)=>a.start-b.start).filter(e => e.start >= new Date().setHours(0,0,0,0)).slice(0, 8);
+      }, halfTime);
+      
+      setTimeout(() => { 
+        el.classList.remove(animClass); 
+        if (onComplete) onComplete();
+      }, duration);
     }
-    function renderCalendar(events) {
-        const el = document.getElementById('cal-events'); el.innerHTML = "";
-        if(events.length === 0) el.innerHTML = "<div style='color:#666;'>No upcoming events.</div>";
-        events.forEach(e => {
-            el.innerHTML += `<div class="cal-item"><div class="cal-date">${e.start.toLocaleDateString()}</div><div class="cal-title">${e.title}</div></div>`;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSettings(); 
+      setTimeout(() => {
+        ['widget-clock', 'widget-media'].forEach(id => {
+          triggerCurtain(id); 
         });
+        fetchLocationAndWeather(); 
+        fetchNewsMulti(); 
+      }, 100); 
+    });
+
+    function openModal(modalId, widgetId) { 
+      document.getElementById(modalId).classList.add('active'); 
+      triggerCurtain(widgetId, null, null, true, false); 
+    }
+    function closeModal(modalId, widgetId) { 
+      triggerCurtain(widgetId, null, () => {
+        document.getElementById(modalId).classList.remove('active');
+      }, true, true); 
     }
 
-    // --- Timer Logic (With Animation & Cancel) ---
-    function startTimer() {
-        const min = parseInt(document.getElementById('t-min').value); if(!min) return;
-        document.getElementById('timer-dlg').close();
-        
-        // ニュースのようなアニメーションをタイマーバーにも適用
-        const tb = document.getElementById('timer-bar');
-        tb.classList.remove('animating'); void tb.offsetWidth; 
-        tb.classList.add('show-state');
-        
-        let total = min * 60; let current = total;
-        if(timerIdx) clearInterval(timerIdx);
-        
-        const tick = () => {
-            if(current <= 0) { cancelTimer(); return; }
-            current--;
-            const ratio = current / total;
-            document.getElementById('timer-progress-bg').style.transform = `scaleX(${ratio})`;
-            let h = Math.floor(current/3600).toString().padStart(2,'0');
-            let m = Math.floor((current%3600)/60).toString().padStart(2,'0');
-            let s = (current%60).toString().padStart(2,'0');
-            document.getElementById('timer-display').textContent = `${h}:${m}:${s}`;
-        };
-        tick(); timerIdx = setInterval(tick, 1000);
-    }
-    function cancelTimer() {
-        clearInterval(timerIdx);
-        document.getElementById('timer-bar').classList.remove('show-state');
-    }
-
-    // --- Drawing & Media & Settings ---
-    const canvas = document.getElementById('memo-canvas'); const ctx = canvas.getContext('2d');
-    function initCanvas() {
-        const p = document.getElementById('memo-panel'); canvas.width = p.clientWidth; canvas.height = p.clientHeight;
-        ctx.lineCap = 'round'; ctx.lineWidth = 4;
-    }
-    canvas.addEventListener('touchstart', e => { ctx.beginPath(); const r = canvas.getBoundingClientRect(); ctx.moveTo(e.touches[0].clientX-r.left, e.touches[0].clientY-r.top); e.preventDefault(); }, {passive:false});
-    canvas.addEventListener('touchmove', e => { 
-        const r = canvas.getBoundingClientRect(); 
-        ctx.globalCompositeOperation = pMode==='eraser'?'destination-out':'source-over';
-        ctx.strokeStyle = pCol; ctx.lineTo(e.touches[0].clientX-r.left, e.touches[0].clientY-r.top); ctx.stroke(); 
-        e.preventDefault(); 
-    }, {passive:false});
-
-    function handleMediaClick() { document.getElementById('media-input').click(); }
-    document.getElementById('media-input').onchange = e => {
-        const file = e.target.files[0]; if(!file) return;
-        const container = document.getElementById('media-container'); container.innerHTML = "";
-        const url = URL.createObjectURL(file);
-        if(file.type.startsWith('video')) {
-            const v = document.createElement('video'); v.src = url; v.loop = true; v.muted = true; v.playsInline = true; v.play(); container.appendChild(v);
-        } else {
-            const i = document.createElement('img'); i.src = url; container.appendChild(i);
-        }
-    };
-
+    // --- LocalStorage 読み書き ---
     function saveSettings() {
-        const s = { ical: document.getElementById('ical-url').value, color: document.getElementById('set-color').value };
-        localStorage.setItem('settings_v26', JSON.stringify(s));
-        document.documentElement.style.setProperty('--accent-color', s.color);
-        fetchCalendar(); document.getElementById('settings-dlg').close();
-    }
-    async function saveFont(input, type) {
-        const file = input.files[0]; if(!file) return;
-        const reader = new FileReader(); reader.onload = async e => {
-            const db = await new Promise(res => { const req = indexedDB.open(DB_NAME, 1); req.onupgradeneeded = ev => ev.target.result.createObjectStore('fonts'); req.onsuccess = ev => res(ev.target.result); });
-            db.transaction('fonts','readwrite').objectStore('fonts').put(e.target.result, 'font'+type);
-            alert("Font saved. Please reload.");
-        }; reader.readAsDataURL(file);
+      const settings = {
+        mainColor: document.getElementById('main-color-picker').value,
+        lat: document.getElementById('lat-input').value,
+        lon: document.getElementById('lon-input').value,
+        timerH: document.getElementById('timer-h').value,
+        timerM: document.getElementById('timer-m').value,
+        timerS: document.getElementById('timer-s').value,
+        timerUntil: document.getElementById('timer-until').value,
+        mediaInterval: document.getElementById('media-interval').value
+      };
+      localStorage.setItem('smartDisplaySettings', JSON.stringify(settings));
     }
 
-    window.onload = () => {
-        const s = JSON.parse(localStorage.getItem('settings_v26') || '{}');
-        if(s.ical) document.getElementById('ical-url').value = s.ical;
-        if(s.color) document.documentElement.style.setProperty('--accent-color', s.color);
+    function loadSettings() {
+      const saved = localStorage.getItem('smartDisplaySettings');
+      if (saved) {
+        try {
+          const s = JSON.parse(saved);
+          if (s.mainColor) { document.getElementById('main-color-picker').value = s.mainColor; updateMainColor(s.mainColor); }
+          if (s.lat) document.getElementById('lat-input').value = s.lat;
+          if (s.lon) document.getElementById('lon-input').value = s.lon;
+          if (s.timerH) document.getElementById('timer-h').value = s.timerH;
+          if (s.timerM) document.getElementById('timer-m').value = s.timerM;
+          if (s.timerS) document.getElementById('timer-s').value = s.timerS;
+          if (s.timerUntil) document.getElementById('timer-until').value = s.timerUntil;
+          if (s.mediaInterval) document.getElementById('media-interval').value = s.mediaInterval;
+        } catch(e) {}
+      }
+      
+      const savedImage = localStorage.getItem('smartDisplayMediaImage');
+      if (savedImage) {
+        mediaImages = [savedImage];
+        document.getElementById('media-placeholder-text').style.display = 'none';
+        const imgEl = document.getElementById('media-image-display');
+        imgEl.src = savedImage;
+        imgEl.style.display = 'block';
+      }
+    }
+
+    function updateMainColor(colorHex) { document.documentElement.style.setProperty('--main-color', colorHex); }
+    function resetMainColor() {
+      const defaultColor = '#d9661a'; document.getElementById('main-color-picker').value = defaultColor;
+      updateMainColor(defaultColor); saveSettings();
+    }
+    function wrapNumbers(text) { return text.replace(/([0-9０-９]+)/g, '<span class="ja-number">$1</span>'); }
+
+    // --- メディアプレイヤー (画像自動圧縮＆軽量化) ---
+    let mediaImages = [];
+    let currentMediaIndex = -1;
+    let mediaIntervalId = null;
+
+    function updateMediaInterval() {
+      saveSettings();
+      if (mediaImages.length > 1) startMediaSlideshow();
+    }
+
+    // スマホの高画質画像をCanvasで軽量化してフリーズを防ぐ
+    function resizeAndCompressImage(file, callback) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+          const MAX_SIZE = 1000; // 最大1000pxに縮小
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_SIZE || height > MAX_SIZE) {
+            if (width > height) {
+              height = Math.round(height * (MAX_SIZE / width));
+              width = MAX_SIZE;
+            } else {
+              width = Math.round(width * (MAX_SIZE / height));
+              height = MAX_SIZE;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // jpeg圧縮でさらに軽くする
+          callback(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    document.getElementById('media-upload').addEventListener('change', function(e) {
+      const files = e.target.files; 
+      if (files.length === 0) return;
+      
+      mediaImages = [];
+      let loadedCount = 0;
+
+      Array.from(files).forEach(file => {
+        resizeAndCompressImage(file, (compressedDataUrl) => {
+          mediaImages.push(compressedDataUrl);
+          loadedCount++;
+          if (loadedCount === files.length) {
+            startMediaSlideshow();
+            // 最初の1枚だけ保存
+            try { localStorage.setItem('smartDisplayMediaImage', mediaImages[0]); } catch (error) {}
+          }
+        });
+      });
+    });
+    
+    function startMediaSlideshow() {
+      clearInterval(mediaIntervalId);
+      if (mediaImages.length === 0) return;
+      showRandomMediaImage();
+      if (mediaImages.length > 1) {
+          const intervalSec = parseInt(document.getElementById('media-interval').value) || 60;
+          mediaIntervalId = setInterval(showRandomMediaImage, intervalSec * 1000);
+      }
+    }
+
+    function showRandomMediaImage() {
+      if (mediaImages.length === 0) return;
+      triggerCurtain('widget-media', () => {
+          let nextIndex = 0;
+          if (mediaImages.length > 1) {
+              do { nextIndex = Math.floor(Math.random() * mediaImages.length); } while (nextIndex === currentMediaIndex);
+          }
+          currentMediaIndex = nextIndex;
+          document.getElementById('media-placeholder-text').style.display = 'none';
+          const imgEl = document.getElementById('media-image-display');
+          imgEl.src = mediaImages[currentMediaIndex];
+          imgEl.style.display = 'block';
+      });
+    }
+
+    // --- 時計 ---
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('clock-display').innerText = `${h}:${m}:${s}`;
+      const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
+      document.getElementById('date-display').innerText = now.toLocaleDateString('en-US', dateOptions);
+    }
+    setInterval(updateClock, 1000); updateClock();
+
+    // --- ニュース ---
+    let newsList = []; 
+    let currentNewsIndex = 0;
+
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    async function fetchNewsMulti() {
+      const rssUrls = [
+        'https://news.yahoo.co.jp/rss/topics/top-picks.xml',
+        'https://news.yahoo.co.jp/rss/topics/domestic.xml',
+        'https://news.yahoo.co.jp/rss/topics/world.xml',
+        'https://news.yahoo.co.jp/rss/topics/business.xml'
+      ];
+      let fetchedItems = [];
+      for (const url of rssUrls) {
+        try {
+          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+          const res = await fetch(proxyUrl); const data = await res.json();
+          const parser = new DOMParser(); const xmlDoc = parser.parseFromString(data.contents, "text/xml");
+          const items = xmlDoc.querySelectorAll("item");
+          Array.from(items).forEach(item => {
+            fetchedItems.push({
+              title: item.querySelector("title")?.textContent || "",
+              link: item.querySelector("link")?.textContent || "",
+              desc: (item.querySelector("description")?.textContent || "").replace(/<[^>]+>/g, '').substring(0, 50)
+            });
+          });
+        } catch (e) { console.error("RSS Fetch Error", e); }
+      }
+      const uniqueItems = Array.from(new Map(fetchedItems.map(item => [item.title, item])).values());
+      newsList = shuffleArray(uniqueItems).slice(0, 30);
+      currentNewsIndex = 0;
+      showNextNews();
+    }
+
+    function showNextNews() {
+      if (newsList.length === 0) return;
+      triggerCurtain('widget-news', () => {
+        const item = newsList[currentNewsIndex];
+        const prevItem = newsList[(currentNewsIndex - 1 + newsList.length) % newsList.length];
+        const nextItem = newsList[(currentNewsIndex + 1) % newsList.length];
+
+        document.getElementById('news-prev-title').innerHTML = wrapNumbers(`▲ Prev: ${prevItem.title}`);
+        document.getElementById('news-title').innerHTML = wrapNumbers(item.title);
+        document.getElementById('news-desc').innerHTML = wrapNumbers(item.desc);
+        document.getElementById('news-next-title').innerHTML = wrapNumbers(`▼ Next: ${nextItem.title}`);
         
-        setInterval(() => {
-            const n = new Date(); document.getElementById('time').textContent = n.toLocaleTimeString('ja-JP',{hour12:false});
-            document.getElementById('date').textContent = n.toLocaleDateString('en-US',{month:'short',day:'2-digit',weekday:'short'}).toUpperCase();
-        }, 1000);
-        
-        fetchNews(); setInterval(fetchNews, 600000); setInterval(showNextNews, 20000);
-        fetchCalendar(); setInterval(fetchCalendar, 1800000);
-        setTimeout(initCanvas, 500);
-    };
-</script>
+        const qrImg = document.getElementById('news-qr'); const qrText = document.getElementById('news-qr-text');
+        if (item.link) { 
+          qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(item.link)}`; 
+          qrImg.style.display = 'block'; qrText.style.display = 'block'; 
+        }
+        currentNewsIndex = (currentNewsIndex + 1) % newsList.length;
+      });
+    }
+    setInterval(fetchNewsMulti, 600000); 
+    setInterval(showNextNews, 30000);
+
+    // --- 天気 ---
+    let weatherDailyData = null; let showWeatherToday = true;
+    function getWeatherIcon(code) {
+      if (code >= 1 && code <= 3) return '☁️'; if (code >= 51 && code <= 67) return '🌧️'; if (code >= 71 && code <= 77) return '❄️'; return '☀️';
+    }
+    async function fetchLocationAndWeather() {
+      const lat = document.getElementById('lat-input').value; const lon = document.getElementById('lon-input').value;
+      try {
+        const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ja`);
+        const geoData = await geoRes.json();
+        document.getElementById('weather-loc-name').innerText = geoData.city || geoData.locality || "Unknown Location";
+      } catch(e) { document.getElementById('weather-loc-name').innerText = `Lat:${lat}, Lon:${lon}`; }
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo`;
+      fetch(url).then(res => res.json()).then(data => { weatherDailyData = data.daily; updateWeatherDisplay(); }).catch(err => console.error(err));
+    }
+    function updateWeatherDisplay() {
+      if (!weatherDailyData) return;
+      const display = document.getElementById('weather-display'); display.innerHTML = ''; const d = weatherDailyData;
+      if (showWeatherToday) {
+        display.innerHTML = `
+          <div class="weather-today">
+            <span style="font-weight:bold; opacity:0.8; font-size:1.2rem;">TODAY</span>
+            <span class="icon">${getWeatherIcon(d.weathercode[0])}</span>
+            <span><span style="color:#ffb366;">H: ${d.temperature_2m_max[0]}℃</span> / <span style="color:#66b3ff;">L: ${d.temperature_2m_min[0]}℃</span></span>
+          </div>`;
+      } else {
+        let html = '<div class="weather-5days">';
+        for (let i = 1; i <= 5; i++) {
+          const date = new Date(d.time[i]);
+          html += `<div class="weather-day"><span>${date.getMonth()+1}/${date.getDate()}</span><span style="font-size:1.4rem;">${getWeatherIcon(d.weathercode[i])}</span><span style="color:#ffb366;">H:${d.temperature_2m_max[i]}</span><span style="color:#66b3ff;">L:${d.temperature_2m_min[i]}</span></div>`;
+        }
+        html += '</div>'; display.innerHTML = html;
+      }
+    }
+    setInterval(() => { if(!weatherDailyData) return; showWeatherToday = !showWeatherToday; triggerCurtain('widget-weather', updateWeatherDisplay); }, 30000);
+
+    // --- タイマー ---
+    let timerInterval = null; let remainingTime = 0;
+    function startTimerLogic(seconds) {
+      if (seconds <= 0) { alert('過去の時刻か無効な時間です。'); return; }
+      remainingTime = seconds; 
+      closeModal('timer-modal', 'timer-modal-widget'); 
+      setTimeout(() => {
+        document.getElementById('timer-wrapper').classList.add('show'); 
+        triggerCurtain('widget-timer', updateTimerDisplay, null, true, false);
+      }, 400); 
+      
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        remainingTime--; updateTimerDisplay();
+        if (remainingTime <= 0) { 
+          clearInterval(timerInterval); 
+          triggerCurtain('widget-timer', null, () => {
+            document.getElementById('timer-wrapper').classList.remove('show'); 
+          }, true, true);
+        }
+      }, 1000);
+    }
+    function startTimerDuration() {
+      const h = parseInt(document.getElementById('timer-h').value) || 0; const m = parseInt(document.getElementById('timer-m').value) || 0; const s = parseInt(document.getElementById('timer-s').value) || 0;
+      startTimerLogic(h * 3600 + m * 60 + s);
+    }
+    function startTimerUntil() {
+      const timeStr = document.getElementById('timer-until').value; if (!timeStr) return;
+      const [th, tm] = timeStr.split(':').map(Number);
+      const now = new Date(); let targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), th, tm, 0);
+      if (targetDate <= now) targetDate.setDate(targetDate.getDate() + 1);
+      startTimerLogic(Math.floor((targetDate.getTime() - now.getTime()) / 1000));
+    }
+    function stopTimer() { 
+      clearInterval(timerInterval); 
+      closeModal('timer-modal', 'timer-modal-widget');
+      setTimeout(() => {
+        triggerCurtain('widget-timer', null, () => {
+          document.getElementById('timer-wrapper').classList.remove('show'); 
+        }, true, true);
+      }, 400);
+    }
+    function updateTimerDisplay() {
+      const h = String(Math.floor(remainingTime / 3600)).padStart(2, '0'); const m = String(Math.floor((remainingTime % 3600) / 60)).padStart(2, '0'); const s = String(remainingTime % 60).padStart(2, '0');
+      document.getElementById('timer-display').innerText = `${h}:${m}:${s}`;
+    }
+
+    // --- フォント (バイナリ直接読み込みでフリーズ回避) ---
+    let fontEnName = 'sans-serif'; let fontJaName = 'sans-serif';
+    function applyFonts() { 
+      document.body.style.fontFamily = `"${fontEnName}", "${fontJaName}", sans-serif`;
+      document.documentElement.style.setProperty('--font-ja', `"${fontJaName}", sans-serif`);
+    }
+
+    function loadAndApplyFont(file, fontNamePrefix, isEnglish) {
+      const reader = new FileReader();
+      // Androidのフリーズを防ぐため、ArrayBuffer（バイナリ）で直接読み込む
+      reader.onload = function(event) {
+        const fontName = fontNamePrefix + Date.now();
+        const customFont = new FontFace(fontName, event.target.result);
+        customFont.load().then(function(loadedFont) { 
+          document.fonts.add(loadedFont); 
+          if (isEnglish) fontEnName = fontName; else fontJaName = fontName; 
+          applyFonts(); 
+        }).catch(e => {
+          console.error("Font load error:", e);
+          alert("フォントの読み込みに失敗しました。");
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    document.getElementById('font-upload-en').addEventListener('change', function(e) {
+      const file = e.target.files[0]; if (!file) return;
+      loadAndApplyFont(file, 'CustomFontEn', true);
+    });
+    document.getElementById('font-upload-ja').addEventListener('change', function(e) {
+      const file = e.target.files[0]; if (!file) return;
+      loadAndApplyFont(file, 'CustomFontJa', false);
+    });
+
+  </script>
 </body>
 </html>
