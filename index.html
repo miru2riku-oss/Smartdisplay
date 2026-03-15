@@ -44,11 +44,11 @@
       padding: 30px 20px 15px 20px; box-sizing: border-box;
       opacity: 0; 
       transition: opacity 0s; 
-      will-change: opacity; /* 描画最適化 */
+      will-change: opacity;
     }
     .show-content { opacity: 1 !important; }
 
-    /* 幕アニメーション (GPUアクセラレーションで超軽量化) */
+    /* 幕アニメーション */
     .widget::after, .modal-widget::after {
       content: ''; position: absolute; top: 0; left: 0;
       width: 100%; height: 100%; background-color: var(--main-color); z-index: 50;
@@ -133,7 +133,6 @@
     .modal-widget h2 { margin-top: 0; border-bottom: 1px solid rgba(100, 150, 180, 0.3); padding-bottom: 10px; font-weight: normal; width: 100%; }
     .close-btn { position: absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: var(--main-color); opacity: 0.7; z-index: 60;}
     .modal-row { margin-bottom: 15px; width: 100%; }
-    /* Androidで選択できないバグ回避のため input[type=file] の accept を削除・変更 */
     .modal-row input[type="number"], .modal-row input[type="time"], .modal-row input[type="color"], .modal-row input[type="file"] { 
       background: rgba(0,0,0,0.3); border: 1px solid rgba(100, 150, 180, 0.3); color: var(--main-color); padding: 8px; border-radius: 6px; 
     }
@@ -258,7 +257,7 @@
         <button class="action-btn" style="padding:8px;" onclick="fetchLocationAndWeather(); closeModal('settings-modal', 'settings-modal-widget');">UPDATE WEATHER</button>
         
         <h3 style="margin-top:20px; font-size:1rem; border-bottom:1px solid rgba(100,150,180,0.3); padding-bottom:5px; width:100%;">FONTS</h3>
-        <p style="font-size: 0.75rem; margin-top: 0; opacity: 0.8;">※Android軽量化のため、フォントは再起動時にリセットされます。</p>
+        <p style="font-size: 0.75rem; margin-top: 0; opacity: 0.8;">※大容量フォントもブラウザ内に自動保存されます。</p>
         <div class="modal-row" style="font-size: 0.9rem;">
           <label style="display:block; margin-bottom:10px; opacity:0.9;">English Font:<br><input type="file" id="font-upload-en" style="width: 100%; margin-top:5px;"></label>
           <label style="display:block; margin-top:15px; opacity:0.9;">Japanese Font (数字適用):<br><input type="file" id="font-upload-ja" style="width: 100%; margin-top:5px;"></label>
@@ -268,6 +267,84 @@
   </div>
 
   <script>
+    // --- IndexedDB for Fonts (大容量フォントの保存・復元用) ---
+    const DB_NAME = 'SmartDisplayDB';
+    const STORE_NAME = 'fonts';
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = e => {
+          e.target.result.createObjectStore(STORE_NAME);
+        };
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror = e => reject(e.target.error);
+      });
+    }
+
+    async function saveFontToDB(key, buffer) {
+      try {
+        const db = await openDB();
+        db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).put(buffer, key);
+      } catch (e) { console.error('Font save error', e); }
+    }
+
+    async function loadFontFromDB(key) {
+      try {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const req = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(key);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      } catch (e) { return null; }
+    }
+
+    let fontEnName = 'sans-serif'; let fontJaName = 'sans-serif';
+    
+    function applyFonts() { 
+      document.body.style.fontFamily = `"${fontEnName}", "${fontJaName}", sans-serif`;
+      document.documentElement.style.setProperty('--font-ja', `"${fontJaName}", sans-serif`);
+    }
+
+    function applyFontBuffer(arrayBuffer, fontNamePrefix, isEnglish) {
+      const fontName = fontNamePrefix + Date.now();
+      const customFont = new FontFace(fontName, arrayBuffer);
+      customFont.load().then(function(loadedFont) { 
+        document.fonts.add(loadedFont); 
+        if (isEnglish) fontEnName = fontName; else fontJaName = fontName; 
+        applyFonts(); 
+      }).catch(e => console.error("Font load error:", e));
+    }
+
+    async function initFonts() {
+      const enBuffer = await loadFontFromDB('fontEn');
+      if (enBuffer) applyFontBuffer(enBuffer, 'CustomFontEn', true);
+      
+      const jaBuffer = await loadFontFromDB('fontJa');
+      if (jaBuffer) applyFontBuffer(jaBuffer, 'CustomFontJa', false);
+    }
+
+    function handleFontUpload(file, fontNamePrefix, isEnglish) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const buffer = event.target.result;
+        applyFontBuffer(buffer, fontNamePrefix, isEnglish);
+        saveFontToDB(isEnglish ? 'fontEn' : 'fontJa', buffer); // DBへ保存
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    document.getElementById('font-upload-en').addEventListener('change', function(e) {
+      const file = e.target.files[0]; if (!file) return;
+      handleFontUpload(file, 'CustomFontEn', true);
+    });
+    
+    document.getElementById('font-upload-ja').addEventListener('change', function(e) {
+      const file = e.target.files[0]; if (!file) return;
+      handleFontUpload(file, 'CustomFontJa', false);
+    });
+
     // --- 幕アニメーション (超軽量版) ---
     function triggerCurtain(elementId, onCover, onComplete, isFast = false, isHide = false) {
       const el = document.getElementById(elementId);
@@ -298,8 +375,11 @@
       }, duration);
     }
 
+    // --- 初期ロード ---
     window.addEventListener('DOMContentLoaded', () => {
       loadSettings(); 
+      initFonts(); // DBからフォントを復元
+      
       setTimeout(() => {
         ['widget-clock', 'widget-media'].forEach(id => {
           triggerCurtain(id); 
@@ -319,7 +399,7 @@
       }, true, true); 
     }
 
-    // --- LocalStorage 読み書き ---
+    // --- LocalStorage 読み書き (設定・画像1枚目) ---
     function saveSettings() {
       const settings = {
         mainColor: document.getElementById('main-color-picker').value,
@@ -377,13 +457,12 @@
       if (mediaImages.length > 1) startMediaSlideshow();
     }
 
-    // スマホの高画質画像をCanvasで軽量化してフリーズを防ぐ
     function resizeAndCompressImage(file, callback) {
       const reader = new FileReader();
       reader.onload = function(event) {
         const img = new Image();
         img.onload = function() {
-          const MAX_SIZE = 1000; // 最大1000pxに縮小
+          const MAX_SIZE = 1000; 
           let width = img.width;
           let height = img.height;
 
@@ -401,8 +480,6 @@
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          
-          // jpeg圧縮でさらに軽くする
           callback(canvas.toDataURL('image/jpeg', 0.8));
         };
         img.src = event.target.result;
@@ -423,7 +500,6 @@
           loadedCount++;
           if (loadedCount === files.length) {
             startMediaSlideshow();
-            // 最初の1枚だけ保存
             try { localStorage.setItem('smartDisplayMediaImage', mediaImages[0]); } catch (error) {}
           }
         });
@@ -613,40 +689,6 @@
       const h = String(Math.floor(remainingTime / 3600)).padStart(2, '0'); const m = String(Math.floor((remainingTime % 3600) / 60)).padStart(2, '0'); const s = String(remainingTime % 60).padStart(2, '0');
       document.getElementById('timer-display').innerText = `${h}:${m}:${s}`;
     }
-
-    // --- フォント (バイナリ直接読み込みでフリーズ回避) ---
-    let fontEnName = 'sans-serif'; let fontJaName = 'sans-serif';
-    function applyFonts() { 
-      document.body.style.fontFamily = `"${fontEnName}", "${fontJaName}", sans-serif`;
-      document.documentElement.style.setProperty('--font-ja', `"${fontJaName}", sans-serif`);
-    }
-
-    function loadAndApplyFont(file, fontNamePrefix, isEnglish) {
-      const reader = new FileReader();
-      // Androidのフリーズを防ぐため、ArrayBuffer（バイナリ）で直接読み込む
-      reader.onload = function(event) {
-        const fontName = fontNamePrefix + Date.now();
-        const customFont = new FontFace(fontName, event.target.result);
-        customFont.load().then(function(loadedFont) { 
-          document.fonts.add(loadedFont); 
-          if (isEnglish) fontEnName = fontName; else fontJaName = fontName; 
-          applyFonts(); 
-        }).catch(e => {
-          console.error("Font load error:", e);
-          alert("フォントの読み込みに失敗しました。");
-        });
-      };
-      reader.readAsArrayBuffer(file);
-    }
-
-    document.getElementById('font-upload-en').addEventListener('change', function(e) {
-      const file = e.target.files[0]; if (!file) return;
-      loadAndApplyFont(file, 'CustomFontEn', true);
-    });
-    document.getElementById('font-upload-ja').addEventListener('change', function(e) {
-      const file = e.target.files[0]; if (!file) return;
-      loadAndApplyFont(file, 'CustomFontJa', false);
-    });
 
   </script>
 </body>
