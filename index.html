@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Display V26 - Calendar & Timer Fixed</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        @font-face { font-family: 'DefaultEn'; src: url('WRCCleanBold.ttf'); }
+        @font-face { font-family: 'DefaultJa'; src: url('ロゴタイプゴシック.otf'); }
+
+        :root {
+            --bg-color: #0f0f0f; --panel-bg: #1a1a1a;
+            --text-color: #ffffff; --accent-color: #e65100;
+            --timer-height: 85px;
+        }
+
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-color);
+            font-family: 'DefaultJa', sans-serif; overflow: hidden; height: 100vh;
+        }
+
+        .font-en { font-family: 'CustomEn', 'DefaultEn', sans-serif !important; }
+        .font-ja { font-family: 'CustomJa', 'DefaultJa', sans-serif !important; }
+
+        .dashboard {
+            display: grid; grid-template-columns: 1.1fr 1.4fr; gap: 15px; padding: 15px;
+            padding-bottom: calc(15px + var(--timer-height) + 10px);
+            height: 100vh; box-sizing: border-box;
+        }
+
+        .left-col { display: flex; flex-direction: column; gap: 15px; overflow: hidden; }
+        #memo-panel { flex: 1; background: #111; }
+        #cal-panel { flex: 2; display: flex; flex-direction: column; overflow: hidden; }
+        .right-col { display: grid; grid-template-rows: 140px 1fr 1fr; gap: 15px; overflow: hidden; }
+
+        .panel { background-color: var(--panel-bg); border-radius: 16px; position: relative; border: 1px solid #2a2a2a; overflow: hidden; }
+        .panel-header { position: absolute; top: 10px; left: 20px; font-size: 0.7rem; font-weight: 900; color: var(--accent-color); letter-spacing: 2px; z-index: 5; }
+
+        /* Animation Curtain */
+        .curtain { position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background-color: var(--accent-color); z-index: 100; pointer-events: none; }
+        @keyframes sweep { 0% { left: -100%; } 50% { left: 0; } 100% { left: 100%; } }
+        .animating .curtain { animation: sweep 0.8s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
+
+        /* Clock & Media */
+        #clock-panel { display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #time { font-size: clamp(2.5rem, 5vw, 3.8rem); font-weight: 800; color: var(--accent-color); line-height: 1; }
+        #date { font-size: 1.1rem; color: #777; margin-top: 5px; letter-spacing: 2px; }
+        #media-panel { cursor: pointer; background: #000; }
+        #media-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        .mode-contain img, .mode-contain video { width: 100%; height: 100%; object-fit: contain; }
+        .mode-cover img, .mode-cover video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* News */
+        .news-content { height: 100%; display: flex; padding: 40px 20px 15px 20px; gap: 20px; box-sizing: border-box; align-items: center; }
+        #news-text-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        #news-title { font-size: 1.2rem; font-weight: 900; color: #fff; margin-bottom: 6px; }
+        #news-body { font-size: 0.95rem; color: #ccc; line-height: 1.4; flex-grow: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+        .qr-wrapper { background: white; padding: 5px; border-radius: 4px; width: 80px; height: 80px; flex-shrink: 0; }
+
+        /* Calendar */
+        #cal-events { padding: 40px 20px 20px 20px; overflow-y: auto; height: 100%; display: flex; flex-direction: column; gap: 10px; }
+        .cal-item { background: #222; padding: 12px; border-radius: 8px; border-left: 4px solid var(--accent-color); }
+        .cal-date { font-size: 0.75rem; color: #aaa; margin-bottom: 3px; }
+        .cal-title { font-size: 1rem; font-weight: bold; color: #fff; }
+
+        /* Memo */
+        #memo-canvas { width: 100%; height: 100%; touch-action: none; }
+        .memo-tools { position: absolute; bottom: 10px; left: 10px; display: flex; gap: 10px; z-index: 150; }
+        .tool-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-color); border: none; color: white; cursor: pointer; }
+
+        /* Timer Bar with Progress and Cancel */
+        #timer-bar {
+            position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 700px; height: var(--timer-height);
+            background: #1a1a1a; border-radius: 12px; border: 1px solid #333;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 500; overflow: hidden; opacity: 0; visibility: hidden; transition: 0.4s;
+        }
+        #timer-bar.show-state { opacity: 1; visibility: visible; }
+        #timer-progress-bg { position: absolute; top: 0; left: 0; height: 100%; width: 100%; background: var(--accent-color); opacity: 0.25; transform: scaleX(1); transform-origin: left; z-index: 0; transition: transform 1s linear; }
+        #timer-display { font-size: 3.5rem; font-weight: 900; color: #fff; z-index: 1; }
+        #timer-cancel { position: absolute; right: 20px; background: rgba(255,255,255,0.1); border: none; color: #ff6666; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; z-index: 2; }
+
+        /* Controls */
+        .controls { position: fixed; bottom: 15px; right: 15px; display: flex; gap: 8px; z-index: 400; }
+        .controls button { background: #222; border: 1px solid #444; color: white; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; }
+        
+        dialog { background: #1e1e1e; color: white; border: none; border-radius: 16px; padding: 25px; width: 90%; max-width: 450px; }
+        input, select { width: 100%; padding: 10px; background: #111; color: white; border: 1px solid #444; border-radius: 8px; margin-top: 5px; }
+        .file-label { display: inline-block; background: #333; padding: 8px; border-radius: 6px; width: 45%; text-align: center; cursor: pointer; font-size: 0.8rem; }
+    </style>
+</head>
+<body onclick="document.getElementById('tool-box').classList.remove('open')">
+
+<div class="dashboard">
+    <div class="left-col">
+        <div id="memo-panel" class="panel">
+            <canvas id="memo-canvas"></canvas>
+            <div class="memo-tools" onclick="event.stopPropagation()">
+                <button class="tool-btn" onclick="document.getElementById('tool-box').classList.toggle('open')">🖋️</button>
+                <div id="tool-box" style="display:none; gap:10px; background:#2a2a2a; padding:5px 15px; border-radius:20px;">
+                    <button onclick="pMode='draw';pCol='#fff'" style="background:#fff; width:20px; height:20px; border-radius:50%; border:none;"></button>
+                    <button onclick="pMode='eraser'" style="background:none; border:none; color:white;">🧽</button>
+                    <button onclick="clearMemo()" style="background:none; border:none; color:red;">CLR</button>
+                </div>
+            </div>
+        </div>
+        <div id="cal-panel" class="panel">
+            <div class="panel-header font-en">CALENDAR / SCHEDULE</div>
+            <div class="curtain"></div>
+            <div id="cal-events" class="font-ja"></div>
+        </div>
+    </div>
+
+    <div class="right-col">
+        <div id="clock-panel" class="panel"><div id="time" class="font-en">00:00</div><div id="date" class="font-en">LOADING...</div></div>
+        <div id="media-panel" class="panel" onclick="handleMediaClick()">
+            <div id="media-container" class="mode-contain"><div style="color:#444;">TAP TO LOAD MEDIA</div></div>
+            <input type="file" id="media-input" style="display:none" accept="image/*,video/*">
+        </div>
+        <div id="news-panel" class="panel">
+            <div class="panel-header font-en">LATEST NEWS</div>
+            <div class="curtain"></div>
+            <div class="news-content">
+                <div id="news-text-area">
+                    <div id="news-title" class="font-ja">Loading news...</div>
+                    <div id="news-body" class="font-ja">Please wait while fetching updates.</div>
+                </div>
+                <div class="qr-wrapper"><div id="news-qr"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="timer-bar">
+    <div id="timer-progress-bg"></div>
+    <div id="timer-display" class="font-en">00:00:00</div>
+    <button id="timer-cancel" onclick="cancelTimer()">×</button>
+</div>
+
+<div class="controls">
+    <button onclick="document.getElementById('timer-dlg').showModal()">⏳</button>
+    <button onclick="document.getElementById('settings-dlg').showModal()">⚙️</button>
+</div>
+
+<dialog id="settings-dlg">
+    <h3 class="font-en">SETTINGS</h3>
+    <label class="font-en" style="font-size:0.7rem;">iCal URL (Google Calendar)</label>
+    <input type="text" id="ical-url" placeholder="https://...">
+    <label class="font-en" style="font-size:0.7rem;">THEME COLOR</label>
+    <input type="color" id="set-color" value="#e65100">
+    <div style="margin-top:15px;">
+        <label class="file-label">EN Font<input type="file" id="f-en" hidden onchange="saveFont(this, 'En')"></label>
+        <label class="file-label">JA Font<input type="file" id="f-ja" hidden onchange="saveFont(this, 'Ja')"></label>
+    </div>
+    <button onclick="saveSettings()" style="width:100%; margin-top:20px; background:var(--accent-color); border:none; padding:10px; color:white; border-radius:8px;">SAVE</button>
+</dialog>
+
+<dialog id="timer-dlg">
+    <h3 class="font-en">SET TIMER</h3>
+    <input type="number" id="t-min" value="3" placeholder="Minutes">
+    <button onclick="startTimer()" style="width:100%; margin-top:15px; background:var(--accent-color); border:none; padding:15px; color:white; border-radius:8px;">START WITH ANIMATION</button>
+</dialog>
+
+<script>
+    // --- Core Variables ---
+    const DB_NAME = 'SmartDisplayDB_V26';
+    let pCol = '#ffffff', pMode = 'draw', timerIdx = null;
+
+    // --- News Logic (Fixed Text Extraction) ---
+    let newsList = []; let newsIdx = 0;
+    async function fetchNews() {
+        try {
+            const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://news.yahoo.co.jp/rss/topics/top-picks.xml?t='+Date.now())}`);
+            const data = await res.json();
+            const xml = new DOMParser().parseFromString(data.contents, "text/xml");
+            newsList = Array.from(xml.querySelectorAll("item"));
+            showNextNews();
+        } catch(e) { console.error("News Load Error", e); }
+    }
+    function showNextNews() {
+        if(newsList.length === 0) return;
+        const panel = document.getElementById('news-panel');
+        panel.classList.remove('animating'); void panel.offsetWidth; panel.classList.add('animating');
+        setTimeout(() => {
+            const item = newsList[newsIdx];
+            document.getElementById('news-title').textContent = item.querySelector("title").textContent;
+            let body = item.querySelector("description") ? item.querySelector("description").textContent : "No details available.";
+            document.getElementById('news-body').textContent = body.replace(/<[^>]*>?/gm, '').substring(0, 100) + "...";
+            const qrEl = document.getElementById('news-qr'); qrEl.innerHTML = "";
+            new QRCode(qrEl, { text: item.querySelector("link").textContent, width: 80, height: 80 });
+            newsIdx = (newsIdx + 1) % newsList.length;
+        }, 400);
+    }
+
+    // --- iCal Calendar Logic (Fixed Logic) ---
+    async function fetchCalendar() {
+        const url = document.getElementById('ical-url').value; if(!url) return;
+        const panel = document.getElementById('cal-panel');
+        panel.classList.remove('animating'); void panel.offsetWidth; panel.classList.add('animating');
+        try {
+            const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+            const data = await res.json();
+            const events = parseICS(data.contents);
+            renderCalendar(events);
+        } catch(e) { console.error("Calendar Load Error", e); }
+    }
+    function parseICS(str) {
+        const events = []; const lines = str.split(/\r?\n/); let cur = null;
+        for(let line of lines) {
+            if(line.startsWith('BEGIN:VEVENT')) cur = {};
+            else if(line.startsWith('END:VEVENT')) { if(cur.start) events.push(cur); cur = null; }
+            else if(cur) {
+                if(line.startsWith('SUMMARY:')) cur.title = line.slice(8);
+                if(line.startsWith('DTSTART')) {
+                    const match = line.match(/:(\d{8}(T\d{6}Z?)?)/);
+                    if(match) {
+                        const s = match[1];
+                        cur.start = new Date(s.slice(0,4), s.slice(4,6)-1, s.slice(6,8));
+                    }
+                }
+            }
+        }
+        return events.sort((a,b)=>a.start-b.start).filter(e => e.start >= new Date().setHours(0,0,0,0)).slice(0, 8);
+    }
+    function renderCalendar(events) {
+        const el = document.getElementById('cal-events'); el.innerHTML = "";
+        if(events.length === 0) el.innerHTML = "<div style='color:#666;'>No upcoming events.</div>";
+        events.forEach(e => {
+            el.innerHTML += `<div class="cal-item"><div class="cal-date">${e.start.toLocaleDateString()}</div><div class="cal-title">${e.title}</div></div>`;
+        });
+    }
+
+    // --- Timer Logic (With Animation & Cancel) ---
+    function startTimer() {
+        const min = parseInt(document.getElementById('t-min').value); if(!min) return;
+        document.getElementById('timer-dlg').close();
+        
+        // ニュースのようなアニメーションをタイマーバーにも適用
+        const tb = document.getElementById('timer-bar');
+        tb.classList.remove('animating'); void tb.offsetWidth; 
+        tb.classList.add('show-state');
+        
+        let total = min * 60; let current = total;
+        if(timerIdx) clearInterval(timerIdx);
+        
+        const tick = () => {
+            if(current <= 0) { cancelTimer(); return; }
+            current--;
+            const ratio = current / total;
+            document.getElementById('timer-progress-bg').style.transform = `scaleX(${ratio})`;
+            let h = Math.floor(current/3600).toString().padStart(2,'0');
+            let m = Math.floor((current%3600)/60).toString().padStart(2,'0');
+            let s = (current%60).toString().padStart(2,'0');
+            document.getElementById('timer-display').textContent = `${h}:${m}:${s}`;
+        };
+        tick(); timerIdx = setInterval(tick, 1000);
+    }
+    function cancelTimer() {
+        clearInterval(timerIdx);
+        document.getElementById('timer-bar').classList.remove('show-state');
+    }
+
+    // --- Drawing & Media & Settings ---
+    const canvas = document.getElementById('memo-canvas'); const ctx = canvas.getContext('2d');
+    function initCanvas() {
+        const p = document.getElementById('memo-panel'); canvas.width = p.clientWidth; canvas.height = p.clientHeight;
+        ctx.lineCap = 'round'; ctx.lineWidth = 4;
+    }
+    canvas.addEventListener('touchstart', e => { ctx.beginPath(); const r = canvas.getBoundingClientRect(); ctx.moveTo(e.touches[0].clientX-r.left, e.touches[0].clientY-r.top); e.preventDefault(); }, {passive:false});
+    canvas.addEventListener('touchmove', e => { 
+        const r = canvas.getBoundingClientRect(); 
+        ctx.globalCompositeOperation = pMode==='eraser'?'destination-out':'source-over';
+        ctx.strokeStyle = pCol; ctx.lineTo(e.touches[0].clientX-r.left, e.touches[0].clientY-r.top); ctx.stroke(); 
+        e.preventDefault(); 
+    }, {passive:false});
+
+    function handleMediaClick() { document.getElementById('media-input').click(); }
+    document.getElementById('media-input').onchange = e => {
+        const file = e.target.files[0]; if(!file) return;
+        const container = document.getElementById('media-container'); container.innerHTML = "";
+        const url = URL.createObjectURL(file);
+        if(file.type.startsWith('video')) {
+            const v = document.createElement('video'); v.src = url; v.loop = true; v.muted = true; v.playsInline = true; v.play(); container.appendChild(v);
+        } else {
+            const i = document.createElement('img'); i.src = url; container.appendChild(i);
+        }
+    };
+
+    function saveSettings() {
+        const s = { ical: document.getElementById('ical-url').value, color: document.getElementById('set-color').value };
+        localStorage.setItem('settings_v26', JSON.stringify(s));
+        document.documentElement.style.setProperty('--accent-color', s.color);
+        fetchCalendar(); document.getElementById('settings-dlg').close();
+    }
+    async function saveFont(input, type) {
+        const file = input.files[0]; if(!file) return;
+        const reader = new FileReader(); reader.onload = async e => {
+            const db = await new Promise(res => { const req = indexedDB.open(DB_NAME, 1); req.onupgradeneeded = ev => ev.target.result.createObjectStore('fonts'); req.onsuccess = ev => res(ev.target.result); });
+            db.transaction('fonts','readwrite').objectStore('fonts').put(e.target.result, 'font'+type);
+            alert("Font saved. Please reload.");
+        }; reader.readAsDataURL(file);
+    }
+
+    window.onload = () => {
+        const s = JSON.parse(localStorage.getItem('settings_v26') || '{}');
+        if(s.ical) document.getElementById('ical-url').value = s.ical;
+        if(s.color) document.documentElement.style.setProperty('--accent-color', s.color);
+        
+        setInterval(() => {
+            const n = new Date(); document.getElementById('time').textContent = n.toLocaleTimeString('ja-JP',{hour12:false});
+            document.getElementById('date').textContent = n.toLocaleDateString('en-US',{month:'short',day:'2-digit',weekday:'short'}).toUpperCase();
+        }, 1000);
+        
+        fetchNews(); setInterval(fetchNews, 600000); setInterval(showNextNews, 20000);
+        fetchCalendar(); setInterval(fetchCalendar, 1800000);
+        setTimeout(initCanvas, 500);
+    };
+</script>
+</body>
+</html>
