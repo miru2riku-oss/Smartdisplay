@@ -10,70 +10,35 @@
     <meta name="theme-color" content="#0b132b">
     <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Smart Display","short_name":"Display","display":"standalone","background_color":"#0b132b","theme_color":"#0b132b","start_url":"."}'>
     
-    <title>Modern Smart Display V6</title>
+    <title>Modern Smart Display V7</title>
     <style>
-        @font-face {
-            font-family: 'WRCCleanBold';
-            src: url('WRCCleanBold.ttf') format('truetype');
-            font-weight: bold; font-style: normal;
-        }
-        @font-face {
-            font-family: 'GenEiLateGop_v2';
-            src: url('GenEiLateGoP_v2.ttf') format('truetype');
-            font-weight: normal; font-style: normal;
-        }
+        @font-face { font-family: 'WRCCleanBold'; src: url('WRCCleanBold.ttf') format('truetype'); font-weight: bold; font-style: normal; }
+        @font-face { font-family: 'GenEiLateGop_v2'; src: url('GenEiLateGoP_v2.ttf') format('truetype'); font-weight: normal; font-style: normal; }
 
-        :root {
-            --bg-color: #0b132b;
-            --main-color: #ff8c00;
-            --font-main: 'WRCCleanBold', 'GenEiLateGop_v2', sans-serif;
-        }
+        :root { --bg-color: #0b132b; --main-color: #ff8c00; --font-main: 'WRCCleanBold', 'GenEiLateGop_v2', sans-serif; }
 
         body {
-            margin: 0; padding: 0;
-            background: radial-gradient(circle at top left, #1a2a50, var(--bg-color));
+            margin: 0; padding: 0; background: radial-gradient(circle at top left, #1a2a50, var(--bg-color));
             background-size: cover; background-position: center; background-repeat: no-repeat;
-            color: #ffffff; font-family: var(--font-main);
-            overflow: hidden; width: 100vw; height: 100vh;
+            color: #ffffff; font-family: var(--font-main); overflow: hidden; width: 100vw; height: 100vh;
             display: flex; flex-direction: column; justify-content: space-between;
-            text-shadow: 0px 2px 10px rgba(0,0,0,0.5);
-            user-select: none; -webkit-user-select: none;
+            text-shadow: 0px 2px 10px rgba(0,0,0,0.5); user-select: none; -webkit-user-select: none;
         }
 
-        .curtain-container {
-            position: relative; overflow: hidden; border-radius: inherit;
-        }
-        .curtain {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--main-color); z-index: 50; transform: translateX(-101%);
-        }
-        @keyframes sweep {
-            0% { transform: translateX(-101%); }
-            40% { transform: translateX(0); }
-            60% { transform: translateX(0); }
-            100% { transform: translateX(101%); }
-        }
+        .curtain-container { position: relative; overflow: hidden; border-radius: inherit; }
+        .curtain { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--main-color); z-index: 50; transform: translateX(-101%); }
+        @keyframes sweep { 0% { transform: translateX(-101%); } 40% { transform: translateX(0); } 60% { transform: translateX(0); } 100% { transform: translateX(101%); } }
 
         .widget-card {
-            background: rgba(10, 15, 30, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 24px; padding: 2vw; position: relative;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            background: rgba(10, 15, 30, 0.4); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 24px; padding: 2vw; position: relative;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
         }
 
-        .widget-title {
-            position: absolute; top: 20px; left: 25px; font-size: 1rem;
-            color: rgba(255, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 2px;
-            font-weight: bold; font-family: 'WRCCleanBold', sans-serif; text-shadow: none; display: flex; gap: 10px;
-        }
-
+        .widget-title { position: absolute; top: 20px; left: 25px; font-size: 1rem; color: rgba(255, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 2px; font-weight: bold; font-family: 'WRCCleanBold', sans-serif; text-shadow: none; display: flex; gap: 10px; }
         #weather-title-city { font-family: 'GenEiLateGop_v2', sans-serif; color: var(--main-color); }
 
-        .header {
-            padding: 2vw 4vw 1vw 4vw; display: flex; justify-content: space-between; align-items: stretch; gap: 3vw; height: 25vh; box-sizing: border-box;
-        }
+        .header { padding: 2vw 4vw 1vw 4vw; display: flex; justify-content: space-between; align-items: stretch; gap: 3vw; height: 25vh; box-sizing: border-box; }
         #clock-widget { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; }
         .time-large { font-size: 7.5rem; line-height: 0.85; margin: 0; letter-spacing: -2px; }
         .date-small { font-size: 1.5rem; color: var(--main-color); margin: 15px 0 0 5px; text-transform: uppercase; letter-spacing: 2px; }
@@ -86,70 +51,42 @@
         .widgets-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 3vw; padding: 0 4vw; height: 40vh; box-sizing: border-box; }
         .widget-content { font-size: 2rem; line-height: 1.4; width: 100%; text-align: center; }
 
-        #news-content { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 100%; padding: 20px; box-sizing: border-box; text-align: left; gap: 20px; }
-        #news-text-area { flex: 1; display: flex; flex-direction: column; justify-content: center; height: 100%; overflow: hidden; }
-        .news-headline { font-size: 1.8rem; color: var(--main-color); font-weight: bold; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .news-desc { font-size: 1.3rem; color: #ddd; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-        #news-qr-container { width: 150px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-shadow: none; color: #000; }
+        #news-content { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; height: 100%; padding: 25px 20px 10px 20px; box-sizing: border-box; text-align: left; gap: 20px; }
+        #news-text-area { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; height: 100%; overflow: hidden; padding-top: 10px; }
+        
+        /* ニュースのタイトルと本文の調整 */
+        .news-headline { font-size: 1.8rem; color: var(--main-color); font-weight: bold; margin-bottom: 8px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .news-desc { font-size: 1.1rem; color: #ddd; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        #news-qr-container { width: 150px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-shadow: none; color: #000; align-self: center; }
         #news-qr-container img { width: 130px; height: 130px; border-radius: 5px; }
         #news-qr-container span { font-size: 0.8rem; margin-top: 8px; font-family: 'GenEiLateGop_v2', sans-serif; font-weight: bold; }
 
         .highlight { color: var(--main-color); }
-
         .footer { padding: 1vw 4vw 2vw 4vw; display: flex; justify-content: space-between; align-items: flex-end; height: 17vh; box-sizing: border-box; }
 
-        /* タイマーの新しいウィジェットレイアウト */
-        #timer-display-area {
-            visibility: hidden; /* 初期非表示 */
-            border-radius: 24px;
-            height: 130px;
-            display: flex;
-            align-items: center;
-            transition: width 0.3s ease;
-            box-sizing: border-box;
-            /* 透明状態でスタンバイ */
-            background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none;
-        }
-        
-        #timer-content-wrapper {
-            display: flex; width: 100%; align-items: center; opacity: 0; padding-top: 20px;
-        }
-
+        #timer-display-area { visibility: hidden; border-radius: 24px; height: 130px; display: flex; align-items: center; transition: width 0.3s ease; box-sizing: border-box; background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; }
+        #timer-content-wrapper { display: flex; width: 100%; align-items: center; opacity: 0; padding-top: 20px; }
         #timer-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
         #timer-text-container { font-size: 4.5rem; color: var(--main-color); line-height: 1; margin-bottom: 10px; text-align: center; }
         #timer-progress-bg { width: 100%; height: 6px; background: rgba(255, 255, 255, 0.2); border-radius: 3px; overflow: hidden; }
         #timer-progress-fill { height: 100%; width: 100%; background: var(--main-color); transition: width 1s linear; box-shadow: 0 0 10px var(--main-color); }
-
-        #timer-right {
-            display: none; flex: 1; flex-direction: column; justify-content: center;
-            border-left: 1px solid rgba(255,255,255,0.2); padding-left: 20px; margin-left: 20px;
-        }
+        #timer-right { display: none; flex: 1; flex-direction: column; justify-content: center; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 20px; margin-left: 20px; }
         #timer-next-label { font-size: 0.9rem; color: rgba(255,255,255,0.6); letter-spacing: 2px; font-family: 'WRCCleanBold', sans-serif; }
         #timer-next-text { font-size: 1.5rem; font-family: 'GenEiLateGop_v2', sans-serif; margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-        @keyframes pulseGlow {
-            0% { text-shadow: 0 0 10px var(--main-color); opacity: 1; }
-            50% { text-shadow: 0 0 40px var(--main-color), 0 0 20px #fff; opacity: 0.8; transform: scale(1.02); }
-            100% { text-shadow: 0 0 10px var(--main-color); opacity: 1; }
-        }
+        @keyframes pulseGlow { 0% { text-shadow: 0 0 10px var(--main-color); opacity: 1; } 50% { text-shadow: 0 0 40px var(--main-color), 0 0 20px #fff; opacity: 0.8; transform: scale(1.02); } 100% { text-shadow: 0 0 10px var(--main-color); opacity: 1; } }
         .timer-finished { animation: pulseGlow 1.5s infinite ease-in-out; color: #fff !important; }
 
         .controls { display: flex; gap: 15px; position: relative; }
-
-        button {
-            background-color: rgba(0, 0, 0, 0.5); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 12px 24px; font-size: 1.1rem; border-radius: 50px; cursor: pointer; font-family: inherit;
-            transition: all 0.3s ease; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
-        }
+        button { background-color: rgba(0, 0, 0, 0.5); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); padding: 12px 24px; font-size: 1.1rem; border-radius: 50px; cursor: pointer; font-family: inherit; transition: all 0.3s ease; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
         button:hover { background-color: var(--main-color); border-color: var(--main-color); color: var(--bg-color); }
         .btn-primary { background-color: var(--main-color); border-color: var(--main-color); color: var(--bg-color); }
 
         .glass-modal { background: rgba(11, 19, 43, 0.85); border: 1px solid var(--main-color); border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); }
         #timer-setup { display: none; position: absolute; bottom: 70px; right: 0; padding: 25px; min-width: 280px; z-index: 101; }
         .timer-row { margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; width: 100%; }
-        input[type="number"], input[type="time"], input[type="text"], input[type="datetime-local"] {
-            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 10px; border-radius: 8px; font-family: inherit; font-size: 1rem; width: 100%; box-sizing: border-box;
-        }
+        input[type="number"], input[type="time"], input[type="text"], input[type="datetime-local"] { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 10px; border-radius: 8px; font-family: inherit; font-size: 1rem; width: 100%; box-sizing: border-box; }
         input[type="number"] { width: 80px; }
         input:focus { outline: none; border-color: var(--main-color); }
 
@@ -161,7 +98,6 @@
         .settings-actions { margin-top: 40px; display: flex; justify-content: space-between; }
         .btn-danger { border-color: #ff4444; color: #ff4444; }
         .btn-danger:hover { background-color: #ff4444; color: white; }
-
         .file-upload-wrapper { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
         .file-upload-wrapper input[type="file"] { border: none; background: none; padding: 0; font-family: inherit; }
     </style>
@@ -242,7 +178,6 @@
                     <button class="btn-danger" onclick="stopTimer()" style="flex:1;">Stop</button>
                 </div>
             </div>
-
             <button onclick="toggleTimerSetup()">Timer</button>
             <button onclick="openSettings()">Settings</button>
         </div>
@@ -278,8 +213,7 @@
                 </div>
             </div>
 
-            <label>天気に表示する地域名 (例: 東京)</label>
-            <input type="text" id="set-city-name" placeholder="東京" style="width: 100%;">
+            <p style="font-size: 0.8rem; color: #aaa; margin-top: 5px;">※天気の地域名は緯度・経度から自動的に取得されます。</p>
 
             <label>Countdown Event Name (予定名)</label>
             <input type="text" id="set-event-name" placeholder="例: 東京旅行" style="width: 100%;">
@@ -310,12 +244,12 @@
         let newsList = []; let weatherData = null; let weatherMode = 0; let newsIndex = 0;
 
         function loadConfig() {
-            const saved = localStorage.getItem('smartDisplaySettingsV6');
+            const saved = localStorage.getItem('smartDisplaySettingsV7');
             if (saved) config = { ...config, ...JSON.parse(saved) };
             applyConfig();
         }
 
-        function saveConfig() { localStorage.setItem('smartDisplaySettingsV6', JSON.stringify(config)); }
+        function saveConfig() { localStorage.setItem('smartDisplaySettingsV7', JSON.stringify(config)); }
 
         function applyConfig() {
             document.documentElement.style.setProperty('--main-color', config.mainColor);
@@ -324,7 +258,18 @@
             document.getElementById('weather-title-city').innerText = `- ${config.cityName}`;
         }
 
-        // 画像アップロードの処理（容量オーバーを防ぐため自動リサイズ・圧縮）
+        // 緯度・経度から市区町村名を逆ジオコーディングで自動取得
+        async function fetchCityNameFromCoords(lat, lon) {
+            try {
+                // クライアントサイド向けの無料逆ジオコーディングAPIを利用
+                const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ja`);
+                const data = await res.json();
+                return data.locality || data.city || data.principalSubdivision || "現在地";
+            } catch (e) {
+                return "取得失敗";
+            }
+        }
+
         document.getElementById('set-bg-file').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -336,16 +281,10 @@
                     const ctx = canvas.getContext('2d');
                     let width = img.width, height = img.height;
                     const MAX_WIDTH = 1920, MAX_HEIGHT = 1080;
-
-                    if (width > height) {
-                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                    } else {
-                        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
-                    }
+                    if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
+                    else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
                     canvas.width = width; canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // JPEGで品質80%に圧縮してDataURL化
                     document.getElementById('set-bg-url').value = canvas.toDataURL('image/jpeg', 0.8);
                 }
                 img.src = event.target.result;
@@ -384,14 +323,13 @@
         }
         setInterval(updateCalendar, 1000 * 60 * 60);
 
-        /* ==================== Timer (Advanced UI & Animation) ==================== */
+        /* ==================== Timer ==================== */
         let timerInterval;
         function toggleTimerSetup() {
             const setup = document.getElementById('timer-setup');
             setup.style.display = setup.style.display === 'block' ? 'none' : 'block';
         }
 
-        // タイマーの専用カーテン制御（背景の出現と消失を綺麗に制御する）
         function triggerCurtainTimer(isStarting, callback) {
             const container = document.getElementById('timer-display-area');
             const curtain = document.getElementById('timer-curtain');
@@ -404,43 +342,29 @@
             
             setTimeout(() => {
                 if (isStarting) {
-                    // カーテンが閉まった瞬間に枠（ウィジェット）を可視化
                     container.classList.add('widget-card');
                     container.style.padding = "1vw 3vw"; container.style.background = ""; container.style.borderColor = ""; container.style.boxShadow = ""; container.style.backdropFilter = "";
                     title.style.display = 'block'; wrapper.style.opacity = '1';
                 } else {
-                    // カーテンが閉まった瞬間に枠（ウィジェット）を透明化・中身削除
                     container.style.background = 'transparent'; container.style.borderColor = 'transparent'; container.style.boxShadow = 'none'; container.style.backdropFilter = 'none';
                     title.style.display = 'none'; wrapper.style.opacity = '0';
                 }
                 if(callback) callback();
             }, 550);
 
-            if (!isStarting) {
-                // カーテンが完全に抜けきったら完全に非表示にする
-                setTimeout(() => { container.style.visibility = 'hidden'; container.classList.remove('widget-card'); }, 1200);
-            }
+            if (!isStarting) { setTimeout(() => { container.style.visibility = 'hidden'; container.classList.remove('widget-card'); }, 1200); }
         }
 
         function setupTimerUIState() {
-            const rightPanel = document.getElementById('timer-right');
-            const nextText = document.getElementById('timer-next-text');
-            const container = document.getElementById('timer-display-area');
-            
+            const rightPanel = document.getElementById('timer-right'), nextText = document.getElementById('timer-next-text'), container = document.getElementById('timer-display-area');
             if (config.nextTask && config.nextTask.trim() !== '') {
-                nextText.innerText = config.nextTask;
-                rightPanel.style.display = 'flex'; container.style.width = '700px';
-            } else {
-                rightPanel.style.display = 'none'; container.style.width = '350px';
-            }
+                nextText.innerText = config.nextTask; rightPanel.style.display = 'flex'; container.style.width = '700px';
+            } else { rightPanel.style.display = 'none'; container.style.width = '350px'; }
         }
 
         function startTimer() {
-            const mins = document.getElementById('timer-minutes').value;
-            const timeVal = document.getElementById('timer-time').value;
-            const nextTask = document.getElementById('timer-next-task').value;
+            const mins = document.getElementById('timer-minutes').value, timeVal = document.getElementById('timer-time').value, nextTask = document.getElementById('timer-next-task').value;
             let targetMs = 0;
-
             if (mins) { targetMs = Date.now() + (parseInt(mins) * 60000); }
             else if (timeVal) {
                 const now = new Date(), [h, m] = timeVal.split(':');
@@ -450,27 +374,20 @@
             } else return;
 
             config.timerTarget = targetMs; config.timerTotalMs = targetMs - Date.now(); config.nextTask = nextTask; saveConfig();
-            
-            document.getElementById('timer-setup').style.display = 'none';
-            document.getElementById('timer-text-container').classList.remove('timer-finished');
-            
+            document.getElementById('timer-setup').style.display = 'none'; document.getElementById('timer-text-container').classList.remove('timer-finished');
             triggerCurtainTimer(true, () => { setupTimerUIState(); updateTimerUI(); runTimerLogic(); });
         }
 
         function stopTimer() {
             config.timerTarget = null; config.timerTotalMs = 0; config.nextTask = ''; saveConfig(); clearInterval(timerInterval);
             document.getElementById('timer-setup').style.display = 'none';
-            triggerCurtainTimer(false, () => {
-                document.getElementById('timer-text-container').innerText = ""; 
-                document.getElementById('timer-text-container').classList.remove('timer-finished');
-            });
+            triggerCurtainTimer(false, () => { document.getElementById('timer-text-container').innerText = ""; document.getElementById('timer-text-container').classList.remove('timer-finished'); });
         }
 
         function updateTimerUI() {
             if (!config.timerTarget) return;
             const diff = config.timerTarget - Date.now();
             const textContainer = document.getElementById('timer-text-container'), progressFill = document.getElementById('timer-progress-fill');
-            
             if (diff <= 0) {
                 textContainer.innerText = "TIME'S UP!"; textContainer.classList.add('timer-finished'); progressFill.style.width = "0%";
                 clearInterval(timerInterval); config.timerTarget = null; saveConfig();
@@ -498,7 +415,8 @@
                 for (let i = 0; i < Math.min(items.length, 15); i++) {
                     const title = items[i].querySelector("title")?.textContent || "", link = items[i].querySelector("link")?.textContent || "";
                     let desc = items[i].querySelector("description")?.textContent || "";
-                    newsList.push({ title, link, desc: desc.replace(/(<([^>]+)>)/gi, "").trim() });
+                    desc = desc.replace(/(<([^>]+)>)/gi, "").trim();
+                    newsList.push({ title, link, desc });
                 }
             } catch (error) { newsList = [{ title: "ニュース取得失敗", link: "", desc: "通信を確認してください。" }]; }
         }
@@ -506,7 +424,15 @@
             if (newsList.length === 0) return;
             triggerCurtain('news-widget', () => {
                 const current = newsList[newsIndex];
-                document.getElementById('news-headline').innerText = current.title; document.getElementById('news-desc').innerText = current.desc;
+                document.getElementById('news-headline').innerText = current.title;
+                
+                // 本文を100文字に制限（超える場合は「...」を付与）
+                let truncatedDesc = current.desc;
+                if (truncatedDesc.length > 100) {
+                    truncatedDesc = truncatedDesc.substring(0, 100) + '...';
+                }
+                document.getElementById('news-desc').innerText = truncatedDesc;
+                
                 const qrContainer = document.getElementById('news-qr-container');
                 if (current.link) { document.getElementById('news-qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(current.link)}`; qrContainer.style.visibility = 'visible'; } 
                 else qrContainer.style.visibility = 'hidden';
@@ -549,22 +475,49 @@
         function openSettings() {
             document.getElementById('set-color').value = config.mainColor; document.getElementById('set-bg-url').value = config.bgUrl || '';
             document.getElementById('set-rss').value = config.rssUrl; document.getElementById('set-lat').value = config.lat; document.getElementById('set-lon').value = config.lon;
-            document.getElementById('set-city-name').value = config.cityName; document.getElementById('set-event-name').value = config.eventName || ''; document.getElementById('set-event-date').value = config.eventDate || '';
+            document.getElementById('set-event-name').value = config.eventName || ''; document.getElementById('set-event-date').value = config.eventDate || '';
             document.getElementById('settings-modal').style.display = 'flex';
         }
         function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; }
-        function saveSettings() {
-            config.mainColor = document.getElementById('set-color').value; config.bgUrl = document.getElementById('set-bg-url').value;
-            config.rssUrl = document.getElementById('set-rss').value; config.lat = parseFloat(document.getElementById('set-lat').value); config.lon = parseFloat(document.getElementById('set-lon').value);
-            config.cityName = document.getElementById('set-city-name').value; config.eventName = document.getElementById('set-event-name').value; config.eventDate = document.getElementById('set-event-date').value;
-            saveConfig(); applyConfig(); closeSettings(); updateCalendar(); fetchWeather().then(cycleWeather); fetchNews().then(cycleNews);
+        
+        async function saveSettings() {
+            config.mainColor = document.getElementById('set-color').value; 
+            config.bgUrl = document.getElementById('set-bg-url').value;
+            config.rssUrl = document.getElementById('set-rss').value; 
+            
+            // 緯度経度から自動で地名を取得
+            const newLat = parseFloat(document.getElementById('set-lat').value);
+            const newLon = parseFloat(document.getElementById('set-lon').value);
+            
+            // もし緯度経度が変わっていたら（または初回）地名を取得し直す
+            if(config.lat !== newLat || config.lon !== newLon || !config.cityName) {
+                document.getElementById('weather-title-city').innerText = "- 取得中...";
+                config.cityName = await fetchCityNameFromCoords(newLat, newLon);
+            }
+            
+            config.lat = newLat;
+            config.lon = newLon;
+            
+            config.eventName = document.getElementById('set-event-name').value; 
+            config.eventDate = document.getElementById('set-event-date').value;
+            
+            saveConfig(); applyConfig(); closeSettings(); updateCalendar(); 
+            fetchWeather().then(cycleWeather); fetchNews().then(cycleNews);
         }
-        function resetAll() { if(confirm("初期化しますか？")) { localStorage.removeItem('smartDisplaySettingsV6'); location.reload(); } }
+        function resetAll() { if(confirm("初期化しますか？")) { localStorage.removeItem('smartDisplaySettingsV7'); location.reload(); } }
 
         /* ==================== Initialization ==================== */
         window.onload = async () => {
             loadConfig(); updateClock(); updateCalendar();
             document.getElementById('news-headline').innerText = "Loading..."; document.getElementById('weather-content').innerText = "Loading...";
+            
+            // 初回ロード時に地名が無い場合のフェールセーフ
+            if(!config.cityName) {
+                config.cityName = await fetchCityNameFromCoords(config.lat, config.lon);
+                saveConfig();
+                applyConfig();
+            }
+
             await fetchNews(); await fetchWeather();
             cycleNews(); cycleWeather(); checkAndResumeTimer();
             setInterval(cycleWeather, 30000); setInterval(cycleNews, 60000); setInterval(fetchWeather, 5 * 60 * 1000); setInterval(fetchNews, 5 * 60 * 1000);    
