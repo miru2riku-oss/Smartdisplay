@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#0b132b">
     <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Smart Display","short_name":"Display","display":"standalone","background_color":"#0b132b","theme_color":"#0b132b","start_url":"."}'>
     
-    <title>Modern Smart Display V8</title>
+    <title>Modern Smart Display V9</title>
     <style>
         @font-face { font-family: 'WRCCleanBold'; src: url('WRCCleanBold.ttf') format('truetype'); font-weight: bold; font-style: normal; }
         @font-face { font-family: 'GenEiLateGop_v2'; src: url('GenEiLateGoP_v2.ttf') format('truetype'); font-weight: normal; font-style: normal; }
@@ -32,52 +32,48 @@
         .widget-card {
             background: rgba(10, 15, 30, 0.4); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 24px; padding: 2vw; position: relative;
             display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); color: #ffffff;
         }
 
-        .widget-title { position: absolute; top: 20px; left: 25px; font-size: 1rem; color: rgba(255, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 2px; font-weight: bold; font-family: 'WRCCleanBold', sans-serif; text-shadow: none; display: flex; gap: 10px; }
-        #weather-title-city { font-family: 'GenEiLateGop_v2', sans-serif; color: var(--main-color); }
+        .widget-title { position: absolute; top: 20px; left: 25px; font-size: 1rem; color: #ffffff; opacity: 0.6; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; font-family: 'WRCCleanBold', sans-serif; text-shadow: none; display: flex; gap: 10px; }
+        #weather-title-city { font-family: 'GenEiLateGop_v2', sans-serif; color: #ffffff; opacity: 1; }
 
         .header { padding: 2vw 4vw 1vw 4vw; display: flex; justify-content: space-between; align-items: stretch; gap: 3vw; height: 25vh; box-sizing: border-box; }
         #clock-widget { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; }
-        .time-large { font-size: 7.5rem; line-height: 0.85; margin: 0; letter-spacing: -2px; }
-        .date-small { font-size: 1.5rem; color: var(--main-color); margin: 15px 0 0 5px; text-transform: uppercase; letter-spacing: 2px; }
+        .time-large { font-size: 7.5rem; line-height: 0.85; margin: 0; letter-spacing: -2px; color: #ffffff; }
+        .date-small { font-size: 1.5rem; color: #ffffff; margin: 15px 0 0 5px; text-transform: uppercase; letter-spacing: 2px; }
 
         #weather-widget { flex: 1; text-align: center; }
-        #weather-content { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+        #weather-content { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #ffffff; }
         .forecast-container { display: flex; justify-content: space-between; width: 90%; margin-top: 10px; }
         .forecast-item { display: flex; flex-direction: column; align-items: center; }
 
         .widgets-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 3vw; padding: 0 4vw; height: 40vh; box-sizing: border-box; }
-        .widget-content { font-size: 2rem; line-height: 1.4; width: 100%; text-align: center; }
+        .widget-content { font-size: 2rem; line-height: 1.4; width: 100%; text-align: center; color: #ffffff; }
 
-        /* ニュースのレイアウト調整（上に詰め、高さを確保） */
-        #news-content { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; height: 100%; padding: 15px 20px 10px 20px; box-sizing: border-box; text-align: left; gap: 20px; }
-        #news-text-area { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; height: 100%; overflow: hidden; padding-top: 0; }
+        /* ニュースのレイアウト（縦中央配置） */
+        #news-content { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 100%; padding: 20px; box-sizing: border-box; text-align: left; gap: 20px; }
+        #news-text-area { flex: 1; display: flex; flex-direction: column; justify-content: center; height: 100%; overflow: hidden; }
         
-        /* タイトルは大きさ維持、本文は小さめ */
-        .news-headline { font-size: 1.8rem; color: var(--main-color); font-weight: bold; margin-bottom: 8px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .news-desc { font-size: 1.1rem; color: #ddd; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+        .news-sub { font-size: 1.1rem; color: #ffffff; opacity: 0.5; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; margin: 5px 0; }
+        .news-headline { font-size: 1.8rem; color: #ffffff; font-weight: bold; margin: 10px 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         
         #news-qr-container { width: 150px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-shadow: none; color: #000; align-self: center; }
         #news-qr-container img { width: 130px; height: 130px; border-radius: 5px; }
         #news-qr-container span { font-size: 0.8rem; margin-top: 8px; font-family: 'GenEiLateGop_v2', sans-serif; font-weight: bold; }
 
-        .highlight { color: var(--main-color); }
+        .highlight { color: #ffffff; }
         .footer { padding: 1vw 4vw 2vw 4vw; display: flex; justify-content: space-between; align-items: flex-end; height: 17vh; box-sizing: border-box; }
 
-        #timer-display-area { visibility: hidden; border-radius: 24px; height: 130px; display: flex; align-items: center; transition: width 0.3s ease; box-sizing: border-box; background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; }
+        #timer-display-area { visibility: hidden; border-radius: 24px; height: 130px; display: flex; align-items: center; transition: width 0.3s ease; box-sizing: border-box; background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; color: #ffffff; }
         #timer-content-wrapper { display: flex; width: 100%; align-items: center; opacity: 0; padding-top: 20px; }
         #timer-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        #timer-text-container { font-size: 4.5rem; color: var(--main-color); line-height: 1; margin-bottom: 10px; text-align: center; }
+        #timer-text-container { font-size: 4.5rem; color: #ffffff; line-height: 1; margin-bottom: 10px; text-align: center; }
         #timer-progress-bg { width: 100%; height: 6px; background: rgba(255, 255, 255, 0.2); border-radius: 3px; overflow: hidden; }
         #timer-progress-fill { height: 100%; width: 100%; background: var(--main-color); transition: width 1s linear; box-shadow: 0 0 10px var(--main-color); }
         #timer-right { display: none; flex: 1; flex-direction: column; justify-content: center; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 20px; margin-left: 20px; }
-        #timer-next-label { font-size: 0.9rem; color: rgba(255,255,255,0.6); letter-spacing: 2px; font-family: 'WRCCleanBold', sans-serif; }
-        #timer-next-text { font-size: 1.5rem; font-family: 'GenEiLateGop_v2', sans-serif; margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
-        @keyframes pulseGlow { 0% { text-shadow: 0 0 10px var(--main-color); opacity: 1; } 50% { text-shadow: 0 0 40px var(--main-color), 0 0 20px #fff; opacity: 0.8; transform: scale(1.02); } 100% { text-shadow: 0 0 10px var(--main-color); opacity: 1; } }
-        .timer-finished { animation: pulseGlow 1.5s infinite ease-in-out; color: #fff !important; }
+        #timer-next-label { font-size: 0.9rem; color: #ffffff; opacity: 0.6; letter-spacing: 2px; font-family: 'WRCCleanBold', sans-serif; }
+        #timer-next-text { font-size: 1.5rem; font-family: 'GenEiLateGop_v2', sans-serif; margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #ffffff; }
 
         .controls { display: flex; gap: 15px; position: relative; }
         button { background-color: rgba(0, 0, 0, 0.5); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); padding: 12px 24px; font-size: 1.1rem; border-radius: 50px; cursor: pointer; font-family: inherit; transition: all 0.3s ease; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
@@ -130,8 +126,9 @@
             <div class="curtain"></div>
             <div id="news-content">
                 <div id="news-text-area">
+                    <div class="news-sub" id="news-prev"></div>
                     <div class="news-headline" id="news-headline">ニュースを取得中...</div>
-                    <div class="news-desc" id="news-desc"></div>
+                    <div class="news-sub" id="news-next"></div>
                 </div>
                 <div id="news-qr-container" style="visibility: hidden;">
                     <img id="news-qr-img" src="" alt="QR Code">
@@ -228,6 +225,10 @@
                     <button class="btn-primary" onclick="saveSettings()">Save Changes</button>
                 </div>
             </div>
+            
+            <div style="margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px; text-align: center; color: #ffffff; font-size: 0.9rem;">
+                次のニュース取得まで: <span id="rss-countdown">05:00</span>
+            </div>
         </div>
     </div>
 
@@ -235,21 +236,22 @@
         const defaultSettings = {
             mainColor: '#ff8c00', bgUrl: '', 
             rssUrl: 'https://news.yahoo.co.jp/rss/topics/top-picks.xml',
-            lat: 35.6895, lon: 139.6917, cityName: '', // 初期値は空にして自動取得させる
+            lat: 35.6895, lon: 139.6917, cityName: '', 
             eventName: '', eventDate: '',
             timerTarget: null, timerTotalMs: 0, nextTask: ''
         };
 
         let config = { ...defaultSettings };
         let newsList = []; let weatherData = null; let weatherMode = 0; let newsIndex = 0;
+        let nextNewsFetchTime = 0; // ニュース再取得までの時刻
 
         function loadConfig() {
-            const saved = localStorage.getItem('smartDisplaySettingsV8');
+            const saved = localStorage.getItem('smartDisplaySettingsV9');
             if (saved) config = { ...config, ...JSON.parse(saved) };
             applyConfig();
         }
 
-        function saveConfig() { localStorage.setItem('smartDisplaySettingsV8', JSON.stringify(config)); }
+        function saveConfig() { localStorage.setItem('smartDisplaySettingsV9', JSON.stringify(config)); }
 
         function applyConfig() {
             document.documentElement.style.setProperty('--main-color', config.mainColor);
@@ -258,15 +260,12 @@
             document.getElementById('weather-title-city').innerText = config.cityName ? `- ${config.cityName}` : '';
         }
 
-        // 緯度・経度から市区町村名を逆ジオコーディングで自動取得
         async function fetchCityNameFromCoords(lat, lon) {
             try {
                 const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ja`);
                 const data = await res.json();
                 return data.locality || data.city || data.principalSubdivision || "現在地";
-            } catch (e) {
-                return "取得失敗";
-            }
+            } catch (e) { return "取得失敗"; }
         }
 
         document.getElementById('set-bg-file').addEventListener('change', function(e) {
@@ -276,14 +275,11 @@
             reader.onload = function(event) {
                 const img = new Image();
                 img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    let width = img.width, height = img.height;
-                    const MAX_WIDTH = 1920, MAX_HEIGHT = 1080;
+                    const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+                    let width = img.width, height = img.height; const MAX_WIDTH = 1920, MAX_HEIGHT = 1080;
                     if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
                     else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
-                    canvas.width = width; canvas.height = height;
-                    ctx.drawImage(img, 0, 0, width, height);
+                    canvas.width = width; canvas.height = height; ctx.drawImage(img, 0, 0, width, height);
                     document.getElementById('set-bg-url').value = canvas.toDataURL('image/jpeg', 0.8);
                 }
                 img.src = event.target.result;
@@ -299,30 +295,42 @@
             setTimeout(() => { if(updateFunction) updateFunction(); }, 550);
         }
 
-        /* ==================== Clock & Calendar ==================== */
+        /* ==================== Clock, Calendar & RSS Countdown ==================== */
         function updateClock() {
             const now = new Date();
             const hh = String(now.getHours()).padStart(2, '0'), mm = String(now.getMinutes()).padStart(2, '0'), ss = String(now.getSeconds()).padStart(2, '0');
             const dateString = now.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' });
             document.getElementById('time-text').innerText = `${hh}:${mm}:${ss}`;
             document.getElementById('date-text').innerText = dateString;
+
+            // RSSフェッチまでのカウントダウン処理
+            if (nextNewsFetchTime > 0) {
+                const fetchDiff = nextNewsFetchTime - Date.now();
+                if (fetchDiff <= 0) {
+                    fetchNews(); // 時間が来たら取得
+                } else {
+                    const m = Math.floor(fetchDiff / 60000);
+                    const s = Math.floor((fetchDiff % 60000) / 1000);
+                    document.getElementById('rss-countdown').innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                }
+            }
         }
         setInterval(updateClock, 1000);
 
         function updateCalendar() {
             const content = document.getElementById('calendar-content');
-            if (!config.eventDate || !config.eventName) { content.innerHTML = `<span style="font-size: 1.5rem; color: #ccc;">予定がありません</span>`; return; }
+            if (!config.eventDate || !config.eventName) { content.innerHTML = `<span style="font-size: 1.5rem; color: #ffffff;">予定がありません</span>`; return; }
             const diff = new Date(config.eventDate).getTime() - Date.now();
             if (diff > 0) {
                 const d = Math.floor(diff / (1000 * 60 * 60 * 24)), h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                content.innerHTML = `<div style="font-size: 1.2rem; margin-bottom: 15px; color: #ddd;"><span class="highlight" style="font-size: 1.8rem;">${config.eventName}</span> まで</div><div style="font-size: 3.5rem; font-family: 'WRCCleanBold';">${d} <span style="font-size: 1.5rem; color: #ccc; font-family: 'GenEiLateGop_v2';">日</span> ${h} <span style="font-size: 1.5rem; color: #ccc; font-family: 'GenEiLateGop_v2';">時間</span></div>`;
+                content.innerHTML = `<div style="font-size: 1.2rem; margin-bottom: 15px; color: #ffffff;"><span class="highlight" style="font-size: 1.8rem;">${config.eventName}</span> まで</div><div style="font-size: 3.5rem; font-family: 'WRCCleanBold'; color: #ffffff;">${d} <span style="font-size: 1.5rem; color: #ffffff; font-family: 'GenEiLateGop_v2';">日</span> ${h} <span style="font-size: 1.5rem; color: #ffffff; font-family: 'GenEiLateGop_v2';">時間</span></div>`;
             } else {
-                content.innerHTML = `<span class="highlight" style="font-size: 2rem;">${config.eventName}</span><br><span style="font-size: 1.5rem;">時間が来ました！</span>`;
+                content.innerHTML = `<span class="highlight" style="font-size: 2rem;">${config.eventName}</span><br><span style="font-size: 1.5rem; color: #ffffff;">時間が来ました！</span>`;
             }
         }
         setInterval(updateCalendar, 1000 * 60 * 60);
 
-        /* ==================== Timer ==================== */
+        /* ==================== Timer (Auto Disappear) ==================== */
         let timerInterval;
         function toggleTimerSetup() {
             const setup = document.getElementById('timer-setup');
@@ -330,35 +338,23 @@
         }
 
         function triggerCurtainTimer(isStarting, callback) {
-            const container = document.getElementById('timer-display-area');
-            const curtain = document.getElementById('timer-curtain');
-            const wrapper = document.getElementById('timer-content-wrapper');
-            const title = document.getElementById('timer-title');
-            
-            container.style.visibility = 'visible';
-            curtain.style.animation = 'none'; void curtain.offsetWidth; 
-            curtain.style.animation = 'sweep 1.2s cubic-bezier(0.77, 0, 0.175, 1) forwards';
-            
+            const container = document.getElementById('timer-display-area'), curtain = document.getElementById('timer-curtain'), wrapper = document.getElementById('timer-content-wrapper'), title = document.getElementById('timer-title');
+            container.style.visibility = 'visible'; curtain.style.animation = 'none'; void curtain.offsetWidth; curtain.style.animation = 'sweep 1.2s cubic-bezier(0.77, 0, 0.175, 1) forwards';
             setTimeout(() => {
                 if (isStarting) {
-                    container.classList.add('widget-card');
-                    container.style.padding = "1vw 3vw"; container.style.background = ""; container.style.borderColor = ""; container.style.boxShadow = ""; container.style.backdropFilter = "";
-                    title.style.display = 'block'; wrapper.style.opacity = '1';
+                    container.classList.add('widget-card'); container.style.padding = "1vw 3vw"; container.style.background = ""; container.style.borderColor = ""; container.style.boxShadow = ""; container.style.backdropFilter = ""; title.style.display = 'block'; wrapper.style.opacity = '1';
                 } else {
-                    container.style.background = 'transparent'; container.style.borderColor = 'transparent'; container.style.boxShadow = 'none'; container.style.backdropFilter = 'none';
-                    title.style.display = 'none'; wrapper.style.opacity = '0';
+                    container.style.background = 'transparent'; container.style.borderColor = 'transparent'; container.style.boxShadow = 'none'; container.style.backdropFilter = 'none'; title.style.display = 'none'; wrapper.style.opacity = '0';
                 }
                 if(callback) callback();
             }, 550);
-
             if (!isStarting) { setTimeout(() => { container.style.visibility = 'hidden'; container.classList.remove('widget-card'); }, 1200); }
         }
 
         function setupTimerUIState() {
             const rightPanel = document.getElementById('timer-right'), nextText = document.getElementById('timer-next-text'), container = document.getElementById('timer-display-area');
-            if (config.nextTask && config.nextTask.trim() !== '') {
-                nextText.innerText = config.nextTask; rightPanel.style.display = 'flex'; container.style.width = '700px';
-            } else { rightPanel.style.display = 'none'; container.style.width = '350px'; }
+            if (config.nextTask && config.nextTask.trim() !== '') { nextText.innerText = config.nextTask; rightPanel.style.display = 'flex'; container.style.width = '700px'; } 
+            else { rightPanel.style.display = 'none'; container.style.width = '350px'; }
         }
 
         function startTimer() {
@@ -366,10 +362,8 @@
             let targetMs = 0;
             if (mins) { targetMs = Date.now() + (parseInt(mins) * 60000); }
             else if (timeVal) {
-                const now = new Date(), [h, m] = timeVal.split(':');
-                const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
-                if (targetDate.getTime() < now.getTime()) targetDate.setDate(targetDate.getDate() + 1);
-                targetMs = targetDate.getTime();
+                const now = new Date(), [h, m] = timeVal.split(':'); const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
+                if (targetDate.getTime() < now.getTime()) targetDate.setDate(targetDate.getDate() + 1); targetMs = targetDate.getTime();
             } else return;
 
             config.timerTarget = targetMs; config.timerTotalMs = targetMs - Date.now(); config.nextTask = nextTask; saveConfig();
@@ -377,6 +371,7 @@
             triggerCurtainTimer(true, () => { setupTimerUIState(); updateTimerUI(); runTimerLogic(); });
         }
 
+        // 0秒になった時や停止ボタンを押した時に自動で非表示になる
         function stopTimer() {
             config.timerTarget = null; config.timerTotalMs = 0; config.nextTask = ''; saveConfig(); clearInterval(timerInterval);
             document.getElementById('timer-setup').style.display = 'none';
@@ -386,25 +381,24 @@
         function updateTimerUI() {
             if (!config.timerTarget) return;
             const diff = config.timerTarget - Date.now();
-            const textContainer = document.getElementById('timer-text-container'), progressFill = document.getElementById('timer-progress-fill');
             if (diff <= 0) {
-                textContainer.innerText = "TIME'S UP!"; textContainer.classList.add('timer-finished'); progressFill.style.width = "0%";
-                clearInterval(timerInterval); config.timerTarget = null; saveConfig();
+                // 0になったら自動でカーテンが閉まって消える
+                stopTimer();
             } else {
                 const h = Math.floor(diff / (1000 * 60 * 60)), m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)), s = Math.floor((diff % (1000 * 60)) / 1000);
-                textContainer.innerText = h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-                progressFill.style.width = `${Math.max(0, (diff / config.timerTotalMs) * 100)}%`;
+                document.getElementById('timer-text-container').innerText = h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                document.getElementById('timer-progress-fill').style.width = `${Math.max(0, (diff / config.timerTotalMs) * 100)}%`;
             }
         }
         function runTimerLogic() { clearInterval(timerInterval); timerInterval = setInterval(updateTimerUI, 1000); }
         function checkAndResumeTimer() {
             if (config.timerTarget) {
                 if (config.timerTarget > Date.now()) { triggerCurtainTimer(true, () => { setupTimerUIState(); updateTimerUI(); runTimerLogic(); }); } 
-                else { triggerCurtainTimer(true, () => { setupTimerUIState(); updateTimerUI(); }); }
+                else { config.timerTarget = null; saveConfig(); /* 過ぎていたら何もしない */ }
             }
         }
 
-        /* ==================== News (Advanced Fetch) ==================== */
+        /* ==================== News ==================== */
         async function fetchNews() {
             try {
                 const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(config.rssUrl)}`);
@@ -414,53 +408,31 @@
                 for (let i = 0; i < Math.min(items.length, 15); i++) {
                     const title = items[i].querySelector("title")?.textContent || "";
                     const link = items[i].querySelector("link")?.textContent || "";
-                    // RSSにdescriptionがあれば取得。ない場合は空文字。
-                    let desc = items[i].querySelector("description")?.textContent || "";
-                    desc = desc.replace(/(<([^>]+)>)/gi, "").trim();
-                    newsList.push({ title, link, desc });
+                    newsList.push({ title, link });
                 }
-            } catch (error) { newsList = [{ title: "ニュース取得失敗", link: "", desc: "通信を確認してください。" }]; }
+            } catch (error) { newsList = [{ title: "ニュース取得失敗", link: "" }]; }
+            
+            // 次のフェッチ時刻を5分後に設定
+            nextNewsFetchTime = Date.now() + 5 * 60 * 1000;
         }
 
-        async function cycleNewsLogic() {
+        function cycleNewsLogic() {
             if (newsList.length === 0) return;
-            const current = newsList[newsIndex];
-            document.getElementById('news-headline').innerText = current.title;
-            const descElement = document.getElementById('news-desc');
             
-            // 本文がない（または極端に短い）場合、裏側で実際の記事ページを取得しにいく
-            if (!current.desc || current.desc.length < 10) {
-                descElement.innerText = "詳細を取得中...";
-                if (current.link) {
-                    try {
-                        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(current.link)}`);
-                        const data = await res.json();
-                        const htmlDoc = new DOMParser().parseFromString(data.contents, "text/html");
-                        // 記事ページのmetaタグ（description）から本文の要約を抽出
-                        let metaDesc = htmlDoc.querySelector('meta[name="description"]')?.content || htmlDoc.querySelector('meta[property="og:description"]')?.content || "";
-                        current.desc = metaDesc.replace(/(<([^>]+)>)/gi, "").trim(); 
-                    } catch(e) {
-                        current.desc = "記事の詳細を読み込めませんでした。";
-                    }
-                }
-            }
-
-            // 100文字で制限して表示
-            let truncatedDesc = current.desc;
-            if (truncatedDesc.length > 100) {
-                truncatedDesc = truncatedDesc.substring(0, 100) + '...';
-            }
-            if (truncatedDesc === "") truncatedDesc = "詳細情報がありません。";
-            descElement.innerText = truncatedDesc;
+            const prevIndex = (newsIndex - 1 + newsList.length) % newsList.length;
+            const nextIndex = (newsIndex + 1) % newsList.length;
+            
+            document.getElementById('news-prev').innerText = newsList.length > 1 ? newsList[prevIndex].title : '';
+            document.getElementById('news-headline').innerText = newsList[newsIndex].title;
+            document.getElementById('news-next').innerText = newsList.length > 1 ? newsList[nextIndex].title : '';
             
             const qrContainer = document.getElementById('news-qr-container');
-            if (current.link) { 
-                document.getElementById('news-qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(current.link)}`; 
+            if (newsList[newsIndex].link) { 
+                document.getElementById('news-qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(newsList[newsIndex].link)}`; 
                 qrContainer.style.visibility = 'visible'; 
             } else {
                 qrContainer.style.visibility = 'hidden';
             }
-            
             newsIndex = (newsIndex + 1) % newsList.length;
         }
 
@@ -484,16 +456,16 @@
             triggerCurtain('weather-widget', () => {
                 const content = document.getElementById('weather-content'), cw = weatherData.current_weather;
                 if (weatherMode === 0) {
-                    content.innerHTML = `<div style="font-size: 1.5rem; color: #ddd; margin-bottom: 5px;">現在の天気</div><div style="display: flex; align-items: baseline; justify-content: center; gap: 20px;"><span style="font-size: 4rem;">${cw.temperature}<span style="font-size: 2rem;">°C</span></span><span style="font-size: 2rem; color: #fff;">${wCodeToJa(cw.weathercode)}</span></div>`;
+                    content.innerHTML = `<div style="font-size: 1.5rem; color: #ffffff; margin-bottom: 5px;">現在の天気</div><div style="display: flex; align-items: baseline; justify-content: center; gap: 20px;"><span style="font-size: 4rem; color: #ffffff;">${cw.temperature}<span style="font-size: 2rem;">°C</span></span><span style="font-size: 2rem; color: #ffffff;">${wCodeToJa(cw.weathercode)}</span></div>`;
                 } else if (weatherMode === 1) {
-                    let html = `<div style="font-size: 1.2rem; color: #ddd; margin-bottom: 10px;">明日から5日間の予報</div><div class="forecast-container">`;
+                    let html = `<div style="font-size: 1.2rem; color: #ffffff; margin-bottom: 10px;">明日から5日間の予報</div><div class="forecast-container">`;
                     for (let i = 1; i <= 5; i++) {
                         if(!weatherData.daily.time[i]) break;
-                        html += `<div class="forecast-item"><span style="font-size: 1.2rem; color: #ccc;">${['日', '月', '火', '水', '木', '金', '土'][new Date(weatherData.daily.time[i]).getDay()]}</span><span style="font-size: 1.2rem; margin: 5px 0;">${wCodeToJa(weatherData.daily.weathercode[i]).split(' ')[0]}</span><span style="font-size: 1.4rem;"><span style="color:#ff6b6b">${Math.round(weatherData.daily.temperature_2m_max[i])}°</span> / <span style="color:#4dabf7">${Math.round(weatherData.daily.temperature_2m_min[i])}°</span></span></div>`;
+                        html += `<div class="forecast-item"><span style="font-size: 1.2rem; color: #ffffff;">${['日', '月', '火', '水', '木', '金', '土'][new Date(weatherData.daily.time[i]).getDay()]}</span><span style="font-size: 1.2rem; color: #ffffff; margin: 5px 0;">${wCodeToJa(weatherData.daily.weathercode[i]).split(' ')[0]}</span><span style="font-size: 1.4rem;"><span style="color:#ff6b6b">${Math.round(weatherData.daily.temperature_2m_max[i])}°</span> / <span style="color:#4dabf7">${Math.round(weatherData.daily.temperature_2m_min[i])}°</span></span></div>`;
                     }
                     content.innerHTML = html + `</div>`;
                 } else {
-                    content.innerHTML = `<div style="font-size: 1.5rem; color: #ddd; margin-bottom: 10px;">気象情報・注意報</div><span style="font-size: 2rem;" class="highlight">現在の風速: ${cw.windspeed} km/h</span><br><span style="font-size: 1.2rem; color: #ccc;">特別な気象警報は発令されていません</span>`;
+                    content.innerHTML = `<div style="font-size: 1.5rem; color: #ffffff; margin-bottom: 10px;">気象情報・注意報</div><span style="font-size: 2rem; color: #ffffff;">現在の風速: ${cw.windspeed} km/h</span><br><span style="font-size: 1.2rem; color: #ffffff;">特別な気象警報は発令されていません</span>`;
                 }
                 weatherMode = (weatherMode + 1) % 3;
             });
@@ -509,45 +481,27 @@
         function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; }
         
         async function saveSettings() {
-            config.mainColor = document.getElementById('set-color').value; 
-            config.bgUrl = document.getElementById('set-bg-url').value;
-            config.rssUrl = document.getElementById('set-rss').value; 
-            
-            const newLat = parseFloat(document.getElementById('set-lat').value);
-            const newLon = parseFloat(document.getElementById('set-lon').value);
-            
-            // 緯度経度が変わった場合、または地名が未設定の場合に自動取得
+            config.mainColor = document.getElementById('set-color').value; config.bgUrl = document.getElementById('set-bg-url').value; config.rssUrl = document.getElementById('set-rss').value; 
+            const newLat = parseFloat(document.getElementById('set-lat').value), newLon = parseFloat(document.getElementById('set-lon').value);
             if(config.lat !== newLat || config.lon !== newLon || !config.cityName) {
-                document.getElementById('weather-title-city').innerText = "- 取得中...";
-                config.cityName = await fetchCityNameFromCoords(newLat, newLon);
+                document.getElementById('weather-title-city').innerText = "- 取得中..."; config.cityName = await fetchCityNameFromCoords(newLat, newLon);
             }
-            
-            config.lat = newLat;
-            config.lon = newLon;
-            
-            config.eventName = document.getElementById('set-event-name').value; 
-            config.eventDate = document.getElementById('set-event-date').value;
-            
-            saveConfig(); applyConfig(); closeSettings(); updateCalendar(); 
-            fetchWeather().then(cycleWeather); fetchNews().then(cycleNews);
+            config.lat = newLat; config.lon = newLon; config.eventName = document.getElementById('set-event-name').value; config.eventDate = document.getElementById('set-event-date').value;
+            saveConfig(); applyConfig(); closeSettings(); updateCalendar(); fetchWeather().then(cycleWeather); 
+            fetchNews().then(cycleNewsLogic); // RSSを変更した場合即時反映
         }
-        function resetAll() { if(confirm("初期化しますか？")) { localStorage.removeItem('smartDisplaySettingsV8'); location.reload(); } }
+        function resetAll() { if(confirm("初期化しますか？")) { localStorage.removeItem('smartDisplaySettingsV9'); location.reload(); } }
 
         /* ==================== Initialization ==================== */
         window.onload = async () => {
             loadConfig(); updateClock(); updateCalendar();
             document.getElementById('news-headline').innerText = "Loading..."; document.getElementById('weather-content').innerText = "Loading...";
             
-            // 初回ロード時に地名がない場合、自動取得して保存
-            if(!config.cityName) {
-                config.cityName = await fetchCityNameFromCoords(config.lat, config.lon);
-                saveConfig();
-                applyConfig();
-            }
+            if(!config.cityName) { config.cityName = await fetchCityNameFromCoords(config.lat, config.lon); saveConfig(); applyConfig(); }
 
             await fetchNews(); await fetchWeather();
-            cycleNews(); cycleWeather(); checkAndResumeTimer();
-            setInterval(cycleWeather, 30000); setInterval(cycleNews, 60000); setInterval(fetchWeather, 5 * 60 * 1000); setInterval(fetchNews, 5 * 60 * 1000);    
+            cycleNewsLogic(); cycleWeather(); checkAndResumeTimer();
+            setInterval(cycleWeather, 30000); setInterval(cycleNews, 60000); setInterval(fetchWeather, 5 * 60 * 1000); 
         };
     </script>
 </body>
