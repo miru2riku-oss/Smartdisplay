@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#0b132b">
     <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Smart Display","short_name":"Display","display":"standalone","background_color":"#0b132b","theme_color":"#0b132b","start_url":"."}'>
     
-    <title>Modern Smart Display V9</title>
+    <title>Modern Smart Display V10 (Optimized)</title>
     <style>
         @font-face { font-family: 'WRCCleanBold'; src: url('WRCCleanBold.ttf') format('truetype'); font-weight: bold; font-style: normal; }
         @font-face { font-family: 'GenEiLateGop_v2'; src: url('GenEiLateGoP_v2.ttf') format('truetype'); font-weight: normal; font-style: normal; }
@@ -23,16 +23,30 @@
             color: #ffffff; font-family: var(--font-main); overflow: hidden; width: 100vw; height: 100vh;
             display: flex; flex-direction: column; justify-content: space-between;
             text-shadow: 0px 2px 10px rgba(0,0,0,0.5); user-select: none; -webkit-user-select: none;
+            overscroll-behavior: none; /* スワイプによるリロード防止などで軽量化 */
         }
 
+        /* --- アニメーションとGPU最適化 --- */
         .curtain-container { position: relative; overflow: hidden; border-radius: inherit; }
-        .curtain { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--main-color); z-index: 50; transform: translateX(-101%); }
-        @keyframes sweep { 0% { transform: translateX(-101%); } 40% { transform: translateX(0); } 60% { transform: translateX(0); } 100% { transform: translateX(101%); } }
+        .curtain { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--main-color); 
+            z-index: 50; transform: translateX(-101%); 
+            will-change: transform; /* アニメーションをGPUに事前通知して軽量化 */
+        }
+        @keyframes sweep { 
+            0% { transform: translateX(-101%) translateZ(0); } 
+            40% { transform: translateX(0) translateZ(0); } 
+            60% { transform: translateX(0) translateZ(0); } 
+            100% { transform: translateX(101%) translateZ(0); } 
+        }
 
+        /* --- ウィジェットカードの軽量化 --- */
         .widget-card {
             background: rgba(10, 15, 30, 0.4); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 24px; padding: 2vw; position: relative;
             display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); color: #ffffff;
+            /* Android向けにぼかしを15px->10pxへ微減し、GPUアクセラレーションを強制 */
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: #ffffff;
+            transform: translateZ(0); contain: layout style; will-change: transform, opacity;
         }
 
         .widget-title { position: absolute; top: 20px; left: 25px; font-size: 1rem; color: #ffffff; opacity: 0.6; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; font-family: 'WRCCleanBold', sans-serif; text-shadow: none; display: flex; gap: 10px; }
@@ -51,7 +65,6 @@
         .widgets-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 3vw; padding: 0 4vw; height: 40vh; box-sizing: border-box; }
         .widget-content { font-size: 2rem; line-height: 1.4; width: 100%; text-align: center; color: #ffffff; }
 
-        /* ニュースのレイアウト（縦中央配置） */
         #news-content { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 100%; padding: 20px; box-sizing: border-box; text-align: left; gap: 20px; }
         #news-text-area { flex: 1; display: flex; flex-direction: column; justify-content: center; height: 100%; overflow: hidden; }
         
@@ -70,24 +83,32 @@
         #timer-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
         #timer-text-container { font-size: 4.5rem; color: #ffffff; line-height: 1; margin-bottom: 10px; text-align: center; }
         #timer-progress-bg { width: 100%; height: 6px; background: rgba(255, 255, 255, 0.2); border-radius: 3px; overflow: hidden; }
-        #timer-progress-fill { height: 100%; width: 100%; background: var(--main-color); transition: width 1s linear; box-shadow: 0 0 10px var(--main-color); }
+        
+        /* --- プログレスバーの劇的な軽量化 (widthからtransformへ変更) --- */
+        #timer-progress-fill { 
+            height: 100%; width: 100%; background: var(--main-color); 
+            transform-origin: left; transform: scaleX(1); /* 初期値 */
+            transition: transform 1s linear; /* 負荷の高いwidthではなくtransformでアニメーション */
+            box-shadow: 0 0 10px var(--main-color); will-change: transform;
+        }
+        
         #timer-right { display: none; flex: 1; flex-direction: column; justify-content: center; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 20px; margin-left: 20px; }
         #timer-next-label { font-size: 0.9rem; color: #ffffff; opacity: 0.6; letter-spacing: 2px; font-family: 'WRCCleanBold', sans-serif; }
         #timer-next-text { font-size: 1.5rem; font-family: 'GenEiLateGop_v2', sans-serif; margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #ffffff; }
 
         .controls { display: flex; gap: 15px; position: relative; }
-        button { background-color: rgba(0, 0, 0, 0.5); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); padding: 12px 24px; font-size: 1.1rem; border-radius: 50px; cursor: pointer; font-family: inherit; transition: all 0.3s ease; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+        button { background-color: rgba(0, 0, 0, 0.5); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); padding: 12px 24px; font-size: 1.1rem; border-radius: 50px; cursor: pointer; font-family: inherit; transition: all 0.3s ease; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transform: translateZ(0); }
         button:hover { background-color: var(--main-color); border-color: var(--main-color); color: var(--bg-color); }
         .btn-primary { background-color: var(--main-color); border-color: var(--main-color); color: var(--bg-color); }
 
-        .glass-modal { background: rgba(11, 19, 43, 0.85); border: 1px solid var(--main-color); border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); }
+        .glass-modal { background: rgba(11, 19, 43, 0.85); border: 1px solid var(--main-color); border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transform: translateZ(0); }
         #timer-setup { display: none; position: absolute; bottom: 70px; right: 0; padding: 25px; min-width: 280px; z-index: 101; }
         .timer-row { margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; width: 100%; }
         input[type="number"], input[type="time"], input[type="text"], input[type="datetime-local"] { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 10px; border-radius: 8px; font-family: inherit; font-size: 1rem; width: 100%; box-sizing: border-box; }
         input[type="number"] { width: 80px; }
         input:focus { outline: none; border-color: var(--main-color); }
 
-        #settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+        #settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transform: translateZ(0); }
         .settings-content { padding: 40px; border-top: 4px solid var(--main-color); width: 80%; max-width: 600px; max-height: 85vh; overflow-y: auto; }
         .settings-content h2 { margin-top: 0; font-weight: normal; }
         .settings-content label { display: block; margin-top: 20px; color: rgba(255, 255, 255, 0.8); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
@@ -243,15 +264,15 @@
 
         let config = { ...defaultSettings };
         let newsList = []; let weatherData = null; let weatherMode = 0; let newsIndex = 0;
-        let nextNewsFetchTime = 0; // ニュース再取得までの時刻
+        let nextNewsFetchTime = 0;
 
         function loadConfig() {
-            const saved = localStorage.getItem('smartDisplaySettingsV9');
+            const saved = localStorage.getItem('smartDisplaySettingsV10');
             if (saved) config = { ...config, ...JSON.parse(saved) };
             applyConfig();
         }
 
-        function saveConfig() { localStorage.setItem('smartDisplaySettingsV9', JSON.stringify(config)); }
+        function saveConfig() { localStorage.setItem('smartDisplaySettingsV10', JSON.stringify(config)); }
 
         function applyConfig() {
             document.documentElement.style.setProperty('--main-color', config.mainColor);
@@ -287,10 +308,12 @@
             reader.readAsDataURL(file);
         });
 
+        // 負荷軽減のためrequestAnimationFrameを活用したカーテンアニメーション
         function triggerCurtain(containerId, updateFunction) {
             const container = document.getElementById(containerId);
             const curtain = container.querySelector('.curtain');
-            curtain.style.animation = 'none'; void curtain.offsetWidth; 
+            curtain.style.animation = 'none';
+            void curtain.offsetWidth; // アニメーションリセットのためのリフロー
             curtain.style.animation = 'sweep 1.2s cubic-bezier(0.77, 0, 0.175, 1) forwards';
             setTimeout(() => { if(updateFunction) updateFunction(); }, 550);
         }
@@ -303,14 +326,11 @@
             document.getElementById('time-text').innerText = `${hh}:${mm}:${ss}`;
             document.getElementById('date-text').innerText = dateString;
 
-            // RSSフェッチまでのカウントダウン処理
             if (nextNewsFetchTime > 0) {
                 const fetchDiff = nextNewsFetchTime - Date.now();
-                if (fetchDiff <= 0) {
-                    fetchNews(); // 時間が来たら取得
-                } else {
-                    const m = Math.floor(fetchDiff / 60000);
-                    const s = Math.floor((fetchDiff % 60000) / 1000);
+                if (fetchDiff <= 0) { fetchNews(); } 
+                else {
+                    const m = Math.floor(fetchDiff / 60000), s = Math.floor((fetchDiff % 60000) / 1000);
                     document.getElementById('rss-countdown').innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
                 }
             }
@@ -330,7 +350,7 @@
         }
         setInterval(updateCalendar, 1000 * 60 * 60);
 
-        /* ==================== Timer (Auto Disappear) ==================== */
+        /* ==================== Timer ==================== */
         let timerInterval;
         function toggleTimerSetup() {
             const setup = document.getElementById('timer-setup');
@@ -367,34 +387,35 @@
             } else return;
 
             config.timerTarget = targetMs; config.timerTotalMs = targetMs - Date.now(); config.nextTask = nextTask; saveConfig();
-            document.getElementById('timer-setup').style.display = 'none'; document.getElementById('timer-text-container').classList.remove('timer-finished');
+            document.getElementById('timer-setup').style.display = 'none'; 
             triggerCurtainTimer(true, () => { setupTimerUIState(); updateTimerUI(); runTimerLogic(); });
         }
 
-        // 0秒になった時や停止ボタンを押した時に自動で非表示になる
         function stopTimer() {
             config.timerTarget = null; config.timerTotalMs = 0; config.nextTask = ''; saveConfig(); clearInterval(timerInterval);
             document.getElementById('timer-setup').style.display = 'none';
-            triggerCurtainTimer(false, () => { document.getElementById('timer-text-container').innerText = ""; document.getElementById('timer-text-container').classList.remove('timer-finished'); });
+            triggerCurtainTimer(false, () => { document.getElementById('timer-text-container').innerText = ""; });
         }
 
         function updateTimerUI() {
             if (!config.timerTarget) return;
             const diff = config.timerTarget - Date.now();
             if (diff <= 0) {
-                // 0になったら自動でカーテンが閉まって消える
-                stopTimer();
+                stopTimer(); // 0になったら自動で消える
             } else {
                 const h = Math.floor(diff / (1000 * 60 * 60)), m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)), s = Math.floor((diff % (1000 * 60)) / 1000);
                 document.getElementById('timer-text-container').innerText = h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-                document.getElementById('timer-progress-fill').style.width = `${Math.max(0, (diff / config.timerTotalMs) * 100)}%`;
+                
+                // transformによる超軽量プログレスバー更新
+                const scale = Math.max(0, diff / config.timerTotalMs);
+                document.getElementById('timer-progress-fill').style.transform = `scaleX(${scale})`;
             }
         }
         function runTimerLogic() { clearInterval(timerInterval); timerInterval = setInterval(updateTimerUI, 1000); }
         function checkAndResumeTimer() {
             if (config.timerTarget) {
                 if (config.timerTarget > Date.now()) { triggerCurtainTimer(true, () => { setupTimerUIState(); updateTimerUI(); runTimerLogic(); }); } 
-                else { config.timerTarget = null; saveConfig(); /* 過ぎていたら何もしない */ }
+                else { config.timerTarget = null; saveConfig(); }
             }
         }
 
@@ -411,14 +432,11 @@
                     newsList.push({ title, link });
                 }
             } catch (error) { newsList = [{ title: "ニュース取得失敗", link: "" }]; }
-            
-            // 次のフェッチ時刻を5分後に設定
             nextNewsFetchTime = Date.now() + 5 * 60 * 1000;
         }
 
         function cycleNewsLogic() {
             if (newsList.length === 0) return;
-            
             const prevIndex = (newsIndex - 1 + newsList.length) % newsList.length;
             const nextIndex = (newsIndex + 1) % newsList.length;
             
@@ -430,15 +448,11 @@
             if (newsList[newsIndex].link) { 
                 document.getElementById('news-qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(newsList[newsIndex].link)}`; 
                 qrContainer.style.visibility = 'visible'; 
-            } else {
-                qrContainer.style.visibility = 'hidden';
-            }
+            } else { qrContainer.style.visibility = 'hidden'; }
             newsIndex = (newsIndex + 1) % newsList.length;
         }
 
-        function cycleNews() {
-            triggerCurtain('news-widget', cycleNewsLogic);
-        }
+        function cycleNews() { triggerCurtain('news-widget', cycleNewsLogic); }
 
         /* ==================== Weather ==================== */
         async function fetchWeather() {
@@ -488,17 +502,15 @@
             }
             config.lat = newLat; config.lon = newLon; config.eventName = document.getElementById('set-event-name').value; config.eventDate = document.getElementById('set-event-date').value;
             saveConfig(); applyConfig(); closeSettings(); updateCalendar(); fetchWeather().then(cycleWeather); 
-            fetchNews().then(cycleNewsLogic); // RSSを変更した場合即時反映
+            fetchNews().then(cycleNewsLogic); 
         }
-        function resetAll() { if(confirm("初期化しますか？")) { localStorage.removeItem('smartDisplaySettingsV9'); location.reload(); } }
+        function resetAll() { if(confirm("初期化しますか？")) { localStorage.removeItem('smartDisplaySettingsV10'); location.reload(); } }
 
         /* ==================== Initialization ==================== */
         window.onload = async () => {
             loadConfig(); updateClock(); updateCalendar();
             document.getElementById('news-headline').innerText = "Loading..."; document.getElementById('weather-content').innerText = "Loading...";
-            
             if(!config.cityName) { config.cityName = await fetchCityNameFromCoords(config.lat, config.lon); saveConfig(); applyConfig(); }
-
             await fetchNews(); await fetchWeather();
             cycleNewsLogic(); cycleWeather(); checkAndResumeTimer();
             setInterval(cycleWeather, 30000); setInterval(cycleNews, 60000); setInterval(fetchWeather, 5 * 60 * 1000); 
