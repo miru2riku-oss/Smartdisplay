@@ -1,695 +1,578 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>多機能スマートディスプレイ</title>
-  <style>
-    /* 変数定義 */
-    :root {
-      --font-ja: sans-serif;
-      --main-color: #d9661a; 
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Display</title>
+    <style>
+        /* デフォルト設定（JavaScriptで上書きされます） */
+        :root {
+            --bg-color: #0b132b; /* 紺色 */
+            --main-color: #ff8c00; /* オレンジ */
+            --font-en: 'Arial', sans-serif;
+            --font-ja: 'Meiryo', sans-serif;
+        }
 
-    body {
-      margin: 0; padding: 0; font-family: sans-serif;
-      background-color: #2b2b2b; color: var(--main-color); overflow: hidden;
-    }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: #ffffff;
+            font-family: var(--font-en), var(--font-ja); /* 数字/英語優先、日本語フォント */
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+        }
 
-    .grid-container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: 1.2fr 1.5fr 1.5fr 80px; 
-      gap: 20px; padding: 25px; height: 100vh; box-sizing: border-box;
-    }
+        /* --- カーテンアニメーションの基盤 --- */
+        .curtain-container {
+            position: relative;
+            overflow: hidden;
+            padding: 20px;
+        }
+        .curtain {
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background-color: var(--main-color);
+            z-index: 10;
+        }
+        @keyframes sweep {
+            0% { left: -100%; }
+            50% { left: 0; }
+            100% { left: 100%; }
+        }
 
-    /* ウィジェット・モーダル共通設定 */
-    .widget, .modal-widget {
-      background-color: rgba(40, 40, 40, 0.4); 
-      border: 1px solid rgba(100, 150, 180, 0.3);
-      border-radius: 16px; position: relative; overflow: hidden;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-    
-    .widget-header {
-      position: absolute; top: 8px; left: 15px; font-size: 0.8rem;
-      font-weight: normal; opacity: 0.6; pointer-events: none; letter-spacing: 2px; z-index: 10;
-      color: var(--main-color); text-transform: uppercase;
-    }
+        /* --- 各ウィジェットの配置 --- */
+        #clock-widget {
+            grid-column: 1;
+            grid-row: 1;
+        }
+        .time-large { font-size: 6rem; font-weight: bold; line-height: 1; margin: 0; }
+        .date-small { font-size: 1.5rem; color: var(--main-color); margin-top: 5px; }
 
-    /* 中身の表示制御 */
-    .widget-content, .modal-inner {
-      width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-      padding: 30px 20px 15px 20px; box-sizing: border-box;
-      opacity: 0; 
-      transition: opacity 0s; 
-      will-change: opacity;
-    }
-    .show-content { opacity: 1 !important; }
+        #weather-widget {
+            grid-column: 2;
+            grid-row: 1;
+            text-align: right;
+            font-size: 1.5rem;
+        }
 
-    /* 幕アニメーション */
-    .widget::after, .modal-widget::after {
-      content: ''; position: absolute; top: 0; left: 0;
-      width: 100%; height: 100%; background-color: var(--main-color); z-index: 50;
-      transform: translateX(-100%);
-      will-change: transform;
-    }
-    .widget.animating::after, .modal-widget.animating::after { animation: sweepCurtain 1.2s cubic-bezier(0.4, 0, 0.2, 1); }
-    .widget.animating-fast::after, .modal-widget.animating-fast::after { animation: sweepCurtain 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
-    
-    @keyframes sweepCurtain { 
-      0% { transform: translateX(-100%); } 
-      40%, 60% { transform: translateX(0%); } 
-      100% { transform: translateX(100%); } 
-    }
+        #news-widget {
+            grid-column: 1 / span 2;
+            grid-row: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            text-align: center;
+            padding: 0 40px;
+        }
 
-    /* 時計 */
-    .clock { grid-column: 1; grid-row: 1; border: none; background: transparent; box-shadow: none; padding: 0; }
-    .clock .widget-content { flex-direction: column; align-items: flex-start; padding-left: 20px; justify-content: center; }
-    #clock-display { font-size: 6rem; font-weight: bold; font-variant-numeric: tabular-nums; line-height: 1; margin-bottom: 10px; text-shadow: 2px 2px 10px rgba(0,0,0,0.3); color: var(--main-color); }
-    #date-display { font-size: 1.6rem; font-weight: normal; opacity: 0.8; color: var(--main-color); }
+        #calendar-widget {
+            position: absolute;
+            top: 40%;
+            left: 20px;
+            font-size: 1.5rem;
+        }
 
-    /* メディアプレイヤー */
-    .media { grid-column: 2; grid-row: 1 / 4; padding: 0; } 
-    .media .widget-content { padding: 0; }
-    .media-placeholder { font-size: 1.5rem; opacity: 0.5; font-weight: bold; letter-spacing: 2px; text-align: center; }
-    #media-image-display { width: 100%; height: 100%; object-fit: cover; border-radius: 16px; display: none; }
+        /* --- タイマーと設定（画面下部） --- */
+        #bottom-bar {
+            grid-column: 1 / span 2;
+            grid-row: 3;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 20px;
+            height: 100px;
+        }
 
-    /* 一般ニュース */
-    .news { grid-column: 1; grid-row: 2; align-items: flex-start; justify-content: flex-start; }
-    .news-layout { display: flex; width: 100%; height: 100%; text-align: left; align-items: center; justify-content: space-between; }
-    .news-text-area { flex: 1; padding-right: 15px; display: flex; flex-direction: column; justify-content: center; }
-    .news-preview { font-size: 0.75rem; opacity: 0.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 4px 0; }
-    .news-title { font-size: 1.1rem; font-weight: bold; line-height: 1.4; margin: 5px 0; color: var(--main-color); }
-    .news-desc { font-size: 0.85rem; opacity: 0.8; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .news-qr-area { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 110px; }
-    .news-qr-area img { width: 100px; height: 100px; border: 2px solid var(--main-color); border-radius: 8px; background: #fff; padding: 3px; }
-    .news-qr-area span { font-size: 0.6rem; margin-top: 6px; text-align: center; font-weight: normal; opacity: 0.8;}
+        #timer-display-area {
+            font-size: 3rem;
+            color: var(--main-color);
+            flex-grow: 1;
+        }
 
-    /* 天気 */
-    .weather { grid-column: 1; grid-row: 3; }
-    #weather-display { display: flex; width: 100%; height: 100%; justify-content: center; align-items: center; flex-direction: row; }
-    .weather-today { display: flex; flex-direction: column; align-items: center; font-size: 1.5rem; font-weight: 300; }
-    .weather-today .icon { font-size: 3.5rem; margin: 5px 0; }
-    .weather-5days { display: flex; gap: 8px; justify-content: center; width: 100%; }
-    .weather-day {
-      display: flex; flex-direction: column; align-items: center; font-size: 0.8rem;
-      background: rgba(255, 255, 255, 0.03); padding: 8px 10px; border-radius: 12px; flex: 1;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .weather-day span { margin: 2px 0; white-space: nowrap; }
+        #controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
 
-    .ja-number { font-family: var(--font-ja); }
+        button {
+            background-color: var(--main-color);
+            color: var(--bg-color);
+            border: none;
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+        }
 
-    /* タイマー表示部 */
-    .timer-wrapper {
-      grid-column: 1 / 3; grid-row: 4; display: flex; justify-content: center; align-items: center;
-      height: 100%; width: 100%; transition: all 0.5s ease; opacity: 0; pointer-events: none; transform: translateY(10px);
-    }
-    .timer-wrapper.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
-    .timer { width: 350px; height: 70px; border: 2px solid var(--main-color); background-color: rgba(30, 30, 30, 0.9); border-radius: 35px; }
-    .timer .widget-content { padding: 0; }
-    #timer-display { font-size: 3.5rem; font-weight: bold; font-variant-numeric: tabular-nums; letter-spacing: 2px; color: var(--main-color); }
+        /* --- 設定モーダル --- */
+        #settings-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        .settings-content {
+            background: var(--bg-color);
+            padding: 30px;
+            border: 2px solid var(--main-color);
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .settings-content label {
+            display: block; margin-top: 15px; color: var(--main-color); font-size: 1.2rem;
+        }
+        .settings-content input {
+            width: 100%; padding: 8px; margin-top: 5px; font-size: 1rem; box-sizing: border-box;
+        }
+        .settings-actions { margin-top: 30px; display: flex; justify-content: space-between; }
+        .danger-btn { background-color: #ff4444; color: white; }
 
-    /* フローティングボタン & モーダル */
-    .floating-controls { position: fixed; bottom: 35px; right: 25px; display: flex; gap: 15px; z-index: 100; }
-    .floating-controls button {
-      background: rgba(30, 30, 30, 0.6); color: var(--main-color); border: 1px solid rgba(100, 150, 180, 0.4); backdrop-filter: blur(5px);
-      padding: 10px 20px; font-size: 0.9rem; font-weight: bold; border-radius: 30px; cursor: pointer; transition: all 0.2s;
-    }
-    .floating-controls button:hover { background: rgba(100, 150, 180, 0.2); }
-    
-    .modal-overlay {
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(3px);
-      display: none; align-items: center; justify-content: center; z-index: 1000; opacity: 0; transition: opacity 0.3s;
-    }
-    .modal-overlay.active { display: flex; opacity: 1; }
-    .modal-widget {
-      background: #2b2b2b; border: 1px solid rgba(100, 150, 180, 0.3); border-radius: 16px; padding: 0; width: 450px;
-      max-width: 90%; color: var(--main-color); position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    }
-    .modal-inner { flex-direction: column; width: 100%; max-height: 80vh; overflow-y: auto; padding: 25px 30px; }
-    .modal-widget h2 { margin-top: 0; border-bottom: 1px solid rgba(100, 150, 180, 0.3); padding-bottom: 10px; font-weight: normal; width: 100%; }
-    .close-btn { position: absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: var(--main-color); opacity: 0.7; z-index: 60;}
-    .modal-row { margin-bottom: 15px; width: 100%; }
-    .modal-row input[type="number"], .modal-row input[type="time"], .modal-row input[type="color"], .modal-row input[type="file"] { 
-      background: rgba(0,0,0,0.3); border: 1px solid rgba(100, 150, 180, 0.3); color: var(--main-color); padding: 8px; border-radius: 6px; 
-    }
-    .modal-row input[type="number"] { width: 60px; }
-    .action-btn { background: var(--main-color); color: #fff; border: none; padding: 12px 20px; font-size: 1rem; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; }
-    .timer-section { border: 1px dashed rgba(100,150,180,0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px; width: 100%; box-sizing: border-box;}
-    .timer-section h3 { margin-top: 0; font-size: 0.9rem; opacity: 0.8; }
-  </style>
+        /* タイマー設定UI */
+        #timer-setup {
+            display: none;
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            background: var(--bg-color);
+            border: 2px solid var(--main-color);
+            padding: 15px;
+            border-radius: 8px;
+        }
+    </style>
 </head>
 <body>
 
-  <div class="grid-container">
-
-    <div class="widget clock" id="widget-clock">
-      <div class="widget-content">
-        <div id="clock-display">00:00:00</div>
-        <div id="date-display">Date Loading...</div>
-      </div>
+    <div id="clock-widget" class="curtain-container">
+        <div class="curtain"></div>
+        <div id="clock-content">
+            <p class="time-large" id="time-text">00:00:00</p>
+            <p class="date-small" id="date-text">----/--/-- (-)</p>
+        </div>
     </div>
 
-    <div class="widget media" id="widget-media">
-      <div class="widget-header" style="z-index: 30; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);">MEDIA PLAYER</div>
-      <div class="widget-content">
-        <div class="media-placeholder" id="media-placeholder-text">NO MEDIA PLAYING<br><span style="font-size: 0.8rem; font-weight:normal;">設定から画像を選択してください</span></div>
-        <img id="media-image-display" src="" alt="Media Image">
-      </div>
+    <div id="calendar-widget" class="curtain-container">
+        <div class="curtain"></div>
+        <div id="calendar-content">予定がありません</div>
     </div>
 
-    <div class="widget news" id="widget-news">
-      <div class="widget-header">LATEST NEWS</div>
-      <div class="widget-content">
-        <div class="news-layout">
-          <div class="news-text-area">
-            <div class="news-preview" id="news-prev-title">Prev: ...</div>
-            <div id="news-title" class="news-title">Loading News...</div>
-            <div id="news-desc" class="news-desc"></div>
-            <div class="news-preview" id="news-next-title">Next: ...</div>
-          </div>
-          <div class="news-qr-area">
-            <img id="news-qr" src="" alt="QR" style="display:none;">
-            <span id="news-qr-text" style="display:none;">Read More</span>
-          </div>
-        </div>
-      </div>
+    <div id="weather-widget" class="curtain-container">
+        <div class="curtain"></div>
+        <div id="weather-content">天気を取得中...</div>
     </div>
 
-    <div class="widget weather" id="widget-weather">
-      <div class="widget-header">WEATHER - <span id="weather-loc-name">Loading Location...</span></div>
-      <div class="widget-content" id="weather-display">
-        Please set location in SETTINGS.
-      </div>
+    <div id="news-widget" class="curtain-container">
+        <div class="curtain"></div>
+        <div id="news-content">ニュースを取得中...</div>
     </div>
 
-    <div class="timer-wrapper" id="timer-wrapper">
-      <div class="widget timer" id="widget-timer">
-        <div class="widget-content">
-          <div id="timer-display">00:00:00</div>
+    <div id="bottom-bar">
+        <div id="timer-display-area" class="curtain-container">
+            <div class="curtain" id="timer-curtain"></div>
+            <div id="timer-content"></div>
         </div>
-      </div>
+
+        <div id="controls">
+            <div id="timer-setup">
+                <input type="number" id="timer-minutes" placeholder="分" style="width: 60px;"> 分
+                <span>または</span>
+                <input type="time" id="timer-time"> まで
+                <button onclick="startTimer()">開始</button>
+                <button onclick="stopTimer()" class="danger-btn">停止</button>
+            </div>
+            <button onclick="toggleTimerSetup()">⏱ タイマー</button>
+            <button onclick="openSettings()">⚙ 設定</button>
+        </div>
     </div>
-  </div>
 
-  <div class="floating-controls">
-    <button onclick="openModal('timer-modal', 'timer-modal-widget')">TIMER</button>
-    <button onclick="openModal('settings-modal', 'settings-modal-widget')">SETTINGS</button>
-  </div>
+    <div id="settings-modal">
+        <div class="settings-content">
+            <h2 style="color: var(--main-color);">スマートディスプレイ設定</h2>
+            
+            <label>メインカラー</label>
+            <input type="color" id="set-color" value="#ff8c00">
 
-  <div class="modal-overlay" id="timer-modal">
-    <div class="modal-widget" id="timer-modal-widget">
-      <div class="modal-inner">
-        <span class="close-btn" onclick="closeModal('timer-modal', 'timer-modal-widget')">&times;</span>
-        <h2>TIMER SETTINGS</h2>
-        <div class="timer-section">
-          <h3>1. 期間を設定して開始</h3>
-          <div class="modal-row">
-            <input type="number" id="timer-h" value="0" min="0" onchange="saveSettings()"> h &nbsp;
-            <input type="number" id="timer-m" value="3" min="0" onchange="saveSettings()"> m &nbsp;
-            <input type="number" id="timer-s" value="0" min="0" onchange="saveSettings()"> s
-          </div>
-          <button class="action-btn" onclick="startTimerDuration()">START DURATION</button>
+            <label>英語/数字フォント (例: Arial, 'Times New Roman')</label>
+            <input type="text" id="set-font-en" value="Arial">
+
+            <label>日本語フォント (例: Meiryo, 'Noto Sans JP')</label>
+            <input type="text" id="set-font-ja" value="Meiryo">
+
+            <label>ニュースRSS URL (Yahoo等をCORS経由で)</label>
+            <input type="text" id="set-rss" value="https://news.yahoo.co.jp/rss/topics/top-picks.xml">
+
+            <label>天気：緯度 (Latitude)</label>
+            <input type="number" id="set-lat" step="0.0001" value="35.6895">
+            
+            <label>天気：経度 (Longitude)</label>
+            <input type="number" id="set-lon" step="0.0001" value="139.6917">
+
+            <label>カレンダー：予定名</label>
+            <input type="text" id="set-event-name" placeholder="例: 東京旅行">
+
+            <label>カレンダー：日時</label>
+            <input type="datetime-local" id="set-event-date">
+
+            <div class="settings-actions">
+                <button class="danger-btn" onclick="resetAll()">全リセット</button>
+                <div>
+                    <button onclick="closeSettings()" style="background:gray;">キャンセル</button>
+                    <button onclick="saveSettings()">保存</button>
+                </div>
+            </div>
         </div>
-        <div class="timer-section">
-          <h3>2. 終了時刻を設定して開始</h3>
-          <div class="modal-row">
-            <input type="time" id="timer-until" value="12:00" style="font-size:1.2rem; width:120px;" onchange="saveSettings()"> まで
-          </div>
-          <button class="action-btn" onclick="startTimerUntil()">START UNTIL TIME</button>
-        </div>
-        <button class="action-btn" onclick="stopTimer()" style="background:rgba(255,255,255,0.1); color:#fff; margin-top:5px;">STOP TIMER</button>
-      </div>
     </div>
-  </div>
 
-  <div class="modal-overlay" id="settings-modal">
-    <div class="modal-widget" id="settings-modal-widget">
-      <div class="modal-inner">
-        <span class="close-btn" onclick="closeModal('settings-modal', 'settings-modal-widget')">&times;</span>
-        <h2>SETTINGS</h2>
-        
-        <h3 style="font-size:1rem; border-bottom:1px solid rgba(100,150,180,0.3); padding-bottom:5px; width:100%;">THEME COLOR</h3>
-        <div class="modal-row" style="display:flex; align-items:center; gap:10px;">
-          <input type="color" id="main-color-picker" value="#d9661a" style="width:50px; height:40px; padding:0; cursor:pointer;" onchange="updateMainColor(this.value); saveSettings();">
-          <button onclick="resetMainColor()" style="background:transparent; border:1px solid var(--main-color); color:var(--main-color); padding:8px 15px; border-radius:5px; cursor:pointer;">Reset Default</button>
-        </div>
-
-        <h3 style="margin-top:20px; font-size:1rem; border-bottom:1px solid rgba(100,150,180,0.3); padding-bottom:5px; width:100%;">MEDIA PLAYER</h3>
-        <p style="font-size: 0.75rem; margin-top: 0; opacity: 0.8;">※複数選択可能。ランダムで切り替わります。</p>
-        <div class="modal-row">
-          <input type="file" id="media-upload" multiple style="width: 100%;">
-        </div>
-        <div class="modal-row">
-          <label>切り替え頻度 (秒): <input type="number" id="media-interval" value="60" min="5" onchange="updateMediaInterval()"></label>
-        </div>
-
-        <h3 style="margin-top:20px; font-size:1rem; border-bottom:1px solid rgba(100,150,180,0.3); padding-bottom:5px; width:100%;">LOCATION (WEATHER)</h3>
-        <div class="modal-row">
-          <label>Lat: <input type="number" id="lat-input" value="35.6895" step="0.0001" onchange="saveSettings()"></label>
-        </div>
-        <div class="modal-row">
-          <label>Lon: <input type="number" id="lon-input" value="139.6917" step="0.0001" onchange="saveSettings()"></label>
-        </div>
-        <button class="action-btn" style="padding:8px;" onclick="fetchLocationAndWeather(); closeModal('settings-modal', 'settings-modal-widget');">UPDATE WEATHER</button>
-        
-        <h3 style="margin-top:20px; font-size:1rem; border-bottom:1px solid rgba(100,150,180,0.3); padding-bottom:5px; width:100%;">FONTS</h3>
-        <p style="font-size: 0.75rem; margin-top: 0; opacity: 0.8;">※大容量フォントもブラウザ内に自動保存されます。</p>
-        <div class="modal-row" style="font-size: 0.9rem;">
-          <label style="display:block; margin-bottom:10px; opacity:0.9;">English Font:<br><input type="file" id="font-upload-en" style="width: 100%; margin-top:5px;"></label>
-          <label style="display:block; margin-top:15px; opacity:0.9;">Japanese Font (数字適用):<br><input type="file" id="font-upload-ja" style="width: 100%; margin-top:5px;"></label>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // --- IndexedDB for Fonts (大容量フォントの保存・復元用) ---
-    const DB_NAME = 'SmartDisplayDB';
-    const STORE_NAME = 'fonts';
-
-    function openDB() {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onupgradeneeded = e => {
-          e.target.result.createObjectStore(STORE_NAME);
+    <script>
+        /* =========================================
+           状態・設定管理 (LocalStorage)
+        ========================================= */
+        const defaultSettings = {
+            mainColor: '#ff8c00', fontEn: 'Arial', fontJa: 'Meiryo',
+            rssUrl: 'https://news.yahoo.co.jp/rss/topics/top-picks.xml',
+            lat: 35.6895, lon: 139.6917, // 東京
+            eventName: '', eventDate: '',
+            timerTarget: null // タイマー終了時刻のタイムスタンプ
         };
-        req.onsuccess = e => resolve(e.target.result);
-        req.onerror = e => reject(e.target.error);
-      });
-    }
 
-    async function saveFontToDB(key, buffer) {
-      try {
-        const db = await openDB();
-        db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).put(buffer, key);
-      } catch (e) { console.error('Font save error', e); }
-    }
+        let config = { ...defaultSettings };
+        let newsList = [];
+        let weatherData = null;
+        let weatherMode = 0; // 0: 今日の天気, 1: 5日間, 2: 注意報(モック)
+        let newsIndex = 0;
 
-    async function loadFontFromDB(key) {
-      try {
-        const db = await openDB();
-        return new Promise((resolve, reject) => {
-          const req = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(key);
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => reject(req.error);
-        });
-      } catch (e) { return null; }
-    }
-
-    let fontEnName = 'sans-serif'; let fontJaName = 'sans-serif';
-    
-    function applyFonts() { 
-      document.body.style.fontFamily = `"${fontEnName}", "${fontJaName}", sans-serif`;
-      document.documentElement.style.setProperty('--font-ja', `"${fontJaName}", sans-serif`);
-    }
-
-    function applyFontBuffer(arrayBuffer, fontNamePrefix, isEnglish) {
-      const fontName = fontNamePrefix + Date.now();
-      const customFont = new FontFace(fontName, arrayBuffer);
-      customFont.load().then(function(loadedFont) { 
-        document.fonts.add(loadedFont); 
-        if (isEnglish) fontEnName = fontName; else fontJaName = fontName; 
-        applyFonts(); 
-      }).catch(e => console.error("Font load error:", e));
-    }
-
-    async function initFonts() {
-      const enBuffer = await loadFontFromDB('fontEn');
-      if (enBuffer) applyFontBuffer(enBuffer, 'CustomFontEn', true);
-      
-      const jaBuffer = await loadFontFromDB('fontJa');
-      if (jaBuffer) applyFontBuffer(jaBuffer, 'CustomFontJa', false);
-    }
-
-    function handleFontUpload(file, fontNamePrefix, isEnglish) {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        const buffer = event.target.result;
-        applyFontBuffer(buffer, fontNamePrefix, isEnglish);
-        saveFontToDB(isEnglish ? 'fontEn' : 'fontJa', buffer); // DBへ保存
-      };
-      reader.readAsArrayBuffer(file);
-    }
-
-    document.getElementById('font-upload-en').addEventListener('change', function(e) {
-      const file = e.target.files[0]; if (!file) return;
-      handleFontUpload(file, 'CustomFontEn', true);
-    });
-    
-    document.getElementById('font-upload-ja').addEventListener('change', function(e) {
-      const file = e.target.files[0]; if (!file) return;
-      handleFontUpload(file, 'CustomFontJa', false);
-    });
-
-    // --- 幕アニメーション (超軽量版) ---
-    function triggerCurtain(elementId, onCover, onComplete, isFast = false, isHide = false) {
-      const el = document.getElementById(elementId);
-      if (!el || el.classList.contains('animating') || el.classList.contains('animating-fast')) {
-        if(onCover) onCover();
-        if(onComplete) onComplete();
-        return;
-      }
-      
-      const animClass = isFast ? 'animating-fast' : 'animating';
-      const duration = isFast ? 600 : 1200; 
-      const halfTime = duration / 2;
-
-      el.classList.add(animClass);
-      
-      setTimeout(() => { 
-        if (onCover) onCover(); 
-        const content = el.querySelector('.widget-content, .modal-inner');
-        if (content) {
-          if (isHide) content.classList.remove('show-content');
-          else content.classList.add('show-content');
-        }
-      }, halfTime);
-      
-      setTimeout(() => { 
-        el.classList.remove(animClass); 
-        if (onComplete) onComplete();
-      }, duration);
-    }
-
-    // --- 初期ロード ---
-    window.addEventListener('DOMContentLoaded', () => {
-      loadSettings(); 
-      initFonts(); // DBからフォントを復元
-      
-      setTimeout(() => {
-        ['widget-clock', 'widget-media'].forEach(id => {
-          triggerCurtain(id); 
-        });
-        fetchLocationAndWeather(); 
-        fetchNewsMulti(); 
-      }, 100); 
-    });
-
-    function openModal(modalId, widgetId) { 
-      document.getElementById(modalId).classList.add('active'); 
-      triggerCurtain(widgetId, null, null, true, false); 
-    }
-    function closeModal(modalId, widgetId) { 
-      triggerCurtain(widgetId, null, () => {
-        document.getElementById(modalId).classList.remove('active');
-      }, true, true); 
-    }
-
-    // --- LocalStorage 読み書き (設定・画像1枚目) ---
-    function saveSettings() {
-      const settings = {
-        mainColor: document.getElementById('main-color-picker').value,
-        lat: document.getElementById('lat-input').value,
-        lon: document.getElementById('lon-input').value,
-        timerH: document.getElementById('timer-h').value,
-        timerM: document.getElementById('timer-m').value,
-        timerS: document.getElementById('timer-s').value,
-        timerUntil: document.getElementById('timer-until').value,
-        mediaInterval: document.getElementById('media-interval').value
-      };
-      localStorage.setItem('smartDisplaySettings', JSON.stringify(settings));
-    }
-
-    function loadSettings() {
-      const saved = localStorage.getItem('smartDisplaySettings');
-      if (saved) {
-        try {
-          const s = JSON.parse(saved);
-          if (s.mainColor) { document.getElementById('main-color-picker').value = s.mainColor; updateMainColor(s.mainColor); }
-          if (s.lat) document.getElementById('lat-input').value = s.lat;
-          if (s.lon) document.getElementById('lon-input').value = s.lon;
-          if (s.timerH) document.getElementById('timer-h').value = s.timerH;
-          if (s.timerM) document.getElementById('timer-m').value = s.timerM;
-          if (s.timerS) document.getElementById('timer-s').value = s.timerS;
-          if (s.timerUntil) document.getElementById('timer-until').value = s.timerUntil;
-          if (s.mediaInterval) document.getElementById('media-interval').value = s.mediaInterval;
-        } catch(e) {}
-      }
-      
-      const savedImage = localStorage.getItem('smartDisplayMediaImage');
-      if (savedImage) {
-        mediaImages = [savedImage];
-        document.getElementById('media-placeholder-text').style.display = 'none';
-        const imgEl = document.getElementById('media-image-display');
-        imgEl.src = savedImage;
-        imgEl.style.display = 'block';
-      }
-    }
-
-    function updateMainColor(colorHex) { document.documentElement.style.setProperty('--main-color', colorHex); }
-    function resetMainColor() {
-      const defaultColor = '#d9661a'; document.getElementById('main-color-picker').value = defaultColor;
-      updateMainColor(defaultColor); saveSettings();
-    }
-    function wrapNumbers(text) { return text.replace(/([0-9０-９]+)/g, '<span class="ja-number">$1</span>'); }
-
-    // --- メディアプレイヤー (画像自動圧縮＆軽量化) ---
-    let mediaImages = [];
-    let currentMediaIndex = -1;
-    let mediaIntervalId = null;
-
-    function updateMediaInterval() {
-      saveSettings();
-      if (mediaImages.length > 1) startMediaSlideshow();
-    }
-
-    function resizeAndCompressImage(file, callback) {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        const img = new Image();
-        img.onload = function() {
-          const MAX_SIZE = 1000; 
-          let width = img.width;
-          let height = img.height;
-
-          if (width > MAX_SIZE || height > MAX_SIZE) {
-            if (width > height) {
-              height = Math.round(height * (MAX_SIZE / width));
-              width = MAX_SIZE;
-            } else {
-              width = Math.round(width * (MAX_SIZE / height));
-              height = MAX_SIZE;
+        function loadConfig() {
+            const saved = localStorage.getItem('smartDisplaySettings');
+            if (saved) {
+                config = { ...config, ...JSON.parse(saved) };
             }
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          callback(canvas.toDataURL('image/jpeg', 0.8));
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
+            applyConfig();
+        }
 
-    document.getElementById('media-upload').addEventListener('change', function(e) {
-      const files = e.target.files; 
-      if (files.length === 0) return;
-      
-      mediaImages = [];
-      let loadedCount = 0;
+        function saveConfig() {
+            localStorage.setItem('smartDisplaySettings', JSON.stringify(config));
+        }
 
-      Array.from(files).forEach(file => {
-        resizeAndCompressImage(file, (compressedDataUrl) => {
-          mediaImages.push(compressedDataUrl);
-          loadedCount++;
-          if (loadedCount === files.length) {
-            startMediaSlideshow();
-            try { localStorage.setItem('smartDisplayMediaImage', mediaImages[0]); } catch (error) {}
-          }
-        });
-      });
-    });
-    
-    function startMediaSlideshow() {
-      clearInterval(mediaIntervalId);
-      if (mediaImages.length === 0) return;
-      showRandomMediaImage();
-      if (mediaImages.length > 1) {
-          const intervalSec = parseInt(document.getElementById('media-interval').value) || 60;
-          mediaIntervalId = setInterval(showRandomMediaImage, intervalSec * 1000);
-      }
-    }
+        function applyConfig() {
+            document.documentElement.style.setProperty('--main-color', config.mainColor);
+            document.documentElement.style.setProperty('--font-en', config.fontEn);
+            document.documentElement.style.setProperty('--font-ja', config.fontJa);
+        }
 
-    function showRandomMediaImage() {
-      if (mediaImages.length === 0) return;
-      triggerCurtain('widget-media', () => {
-          let nextIndex = 0;
-          if (mediaImages.length > 1) {
-              do { nextIndex = Math.floor(Math.random() * mediaImages.length); } while (nextIndex === currentMediaIndex);
-          }
-          currentMediaIndex = nextIndex;
-          document.getElementById('media-placeholder-text').style.display = 'none';
-          const imgEl = document.getElementById('media-image-display');
-          imgEl.src = mediaImages[currentMediaIndex];
-          imgEl.style.display = 'block';
-      });
-    }
+        /* =========================================
+           カーテンアニメーション制御
+        ========================================= */
+        function triggerCurtain(containerId, updateFunction) {
+            const container = document.getElementById(containerId);
+            const curtain = container.querySelector('.curtain');
+            
+            // アニメーションのリセット
+            curtain.style.animation = 'none';
+            void curtain.offsetWidth; // リフローを強制
+            
+            // アニメーション開始 (1秒で通過)
+            curtain.style.animation = 'sweep 1.2s ease-in-out forwards';
+            
+            // カーテンが画面を覆い隠したタイミング(約0.6秒後)で中身を書き換える
+            setTimeout(() => {
+                if(updateFunction) updateFunction();
+            }, 600);
+        }
 
-    // --- 時計 ---
-    function updateClock() {
-      const now = new Date();
-      const h = String(now.getHours()).padStart(2, '0');
-      const m = String(now.getMinutes()).padStart(2, '0');
-      const s = String(now.getSeconds()).padStart(2, '0');
-      document.getElementById('clock-display').innerText = `${h}:${m}:${s}`;
-      const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
-      document.getElementById('date-display').innerText = now.toLocaleDateString('en-US', dateOptions);
-    }
-    setInterval(updateClock, 1000); updateClock();
+        /* =========================================
+           時計機能
+        ========================================= */
+        function updateClock() {
+            const now = new Date();
+            const days = ['日', '月', '火', '水', '木', '金', '土'];
+            
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            
+            const yyyy = now.getFullYear();
+            const mo = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const day = days[now.getDay()];
 
-    // --- ニュース ---
-    let newsList = []; 
-    let currentNewsIndex = 0;
+            document.getElementById('time-text').innerText = `${hh}:${mm}:${ss}`;
+            document.getElementById('date-text').innerText = `${yyyy}/${mo}/${dd} (${day})`;
+        }
+        setInterval(updateClock, 1000);
 
-    function shuffleArray(array) {
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-      }
-      return array;
-    }
+        /* =========================================
+           カレンダー（カウントダウン）
+        ========================================= */
+        function updateCalendar() {
+            if (!config.eventDate || !config.eventName) {
+                document.getElementById('calendar-content').innerHTML = "";
+                return;
+            }
+            const target = new Date(config.eventDate).getTime();
+            const now = new Date().getTime();
+            const diff = target - now;
 
-    async function fetchNewsMulti() {
-      const rssUrls = [
-        'https://news.yahoo.co.jp/rss/topics/top-picks.xml',
-        'https://news.yahoo.co.jp/rss/topics/domestic.xml',
-        'https://news.yahoo.co.jp/rss/topics/world.xml',
-        'https://news.yahoo.co.jp/rss/topics/business.xml'
-      ];
-      let fetchedItems = [];
-      for (const url of rssUrls) {
-        try {
-          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-          const res = await fetch(proxyUrl); const data = await res.json();
-          const parser = new DOMParser(); const xmlDoc = parser.parseFromString(data.contents, "text/xml");
-          const items = xmlDoc.querySelectorAll("item");
-          Array.from(items).forEach(item => {
-            fetchedItems.push({
-              title: item.querySelector("title")?.textContent || "",
-              link: item.querySelector("link")?.textContent || "",
-              desc: (item.querySelector("description")?.textContent || "").replace(/<[^>]+>/g, '').substring(0, 50)
+            if (diff > 0) {
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                document.getElementById('calendar-content').innerHTML = 
+                    `<span style="color:var(--main-color)">${config.eventName}</span> まで<br>${d}日と${h}時間`;
+            } else {
+                document.getElementById('calendar-content').innerHTML = 
+                    `<span style="color:var(--main-color)">${config.eventName}</span> は終了しました`;
+            }
+        }
+        setInterval(updateCalendar, 1000 * 60 * 60); // 1時間ごとに更新
+
+        /* =========================================
+           タイマー機能（バックグラウンド継続）
+        ========================================= */
+        let timerInterval;
+
+        function toggleTimerSetup() {
+            const setup = document.getElementById('timer-setup');
+            setup.style.display = setup.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function startTimer() {
+            const mins = document.getElementById('timer-minutes').value;
+            const timeVal = document.getElementById('timer-time').value;
+            let targetMs = 0;
+
+            if (mins) {
+                targetMs = Date.now() + (parseInt(mins) * 60000);
+            } else if (timeVal) {
+                const now = new Date();
+                const [h, m] = timeVal.split(':');
+                const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
+                if (targetDate.getTime() < now.getTime()) {
+                    targetDate.setDate(targetDate.getDate() + 1); // 翌日
+                }
+                targetMs = targetDate.getTime();
+            } else {
+                return;
+            }
+
+            config.timerTarget = targetMs;
+            saveConfig();
+            document.getElementById('timer-setup').style.display = 'none';
+            
+            // タイマーエリア出現のカーテンアニメーション
+            triggerCurtain('timer-display-area', () => {
+                runTimerLogic();
             });
-          });
-        } catch (e) { console.error("RSS Fetch Error", e); }
-      }
-      const uniqueItems = Array.from(new Map(fetchedItems.map(item => [item.title, item])).values());
-      newsList = shuffleArray(uniqueItems).slice(0, 30);
-      currentNewsIndex = 0;
-      showNextNews();
-    }
-
-    function showNextNews() {
-      if (newsList.length === 0) return;
-      triggerCurtain('widget-news', () => {
-        const item = newsList[currentNewsIndex];
-        const prevItem = newsList[(currentNewsIndex - 1 + newsList.length) % newsList.length];
-        const nextItem = newsList[(currentNewsIndex + 1) % newsList.length];
-
-        document.getElementById('news-prev-title').innerHTML = wrapNumbers(`▲ Prev: ${prevItem.title}`);
-        document.getElementById('news-title').innerHTML = wrapNumbers(item.title);
-        document.getElementById('news-desc').innerHTML = wrapNumbers(item.desc);
-        document.getElementById('news-next-title').innerHTML = wrapNumbers(`▼ Next: ${nextItem.title}`);
-        
-        const qrImg = document.getElementById('news-qr'); const qrText = document.getElementById('news-qr-text');
-        if (item.link) { 
-          qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(item.link)}`; 
-          qrImg.style.display = 'block'; qrText.style.display = 'block'; 
         }
-        currentNewsIndex = (currentNewsIndex + 1) % newsList.length;
-      });
-    }
-    setInterval(fetchNewsMulti, 600000); 
-    setInterval(showNextNews, 30000);
 
-    // --- 天気 ---
-    let weatherDailyData = null; let showWeatherToday = true;
-    function getWeatherIcon(code) {
-      if (code >= 1 && code <= 3) return '☁️'; if (code >= 51 && code <= 67) return '🌧️'; if (code >= 71 && code <= 77) return '❄️'; return '☀️';
-    }
-    async function fetchLocationAndWeather() {
-      const lat = document.getElementById('lat-input').value; const lon = document.getElementById('lon-input').value;
-      try {
-        const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ja`);
-        const geoData = await geoRes.json();
-        document.getElementById('weather-loc-name').innerText = geoData.city || geoData.locality || "Unknown Location";
-      } catch(e) { document.getElementById('weather-loc-name').innerText = `Lat:${lat}, Lon:${lon}`; }
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo`;
-      fetch(url).then(res => res.json()).then(data => { weatherDailyData = data.daily; updateWeatherDisplay(); }).catch(err => console.error(err));
-    }
-    function updateWeatherDisplay() {
-      if (!weatherDailyData) return;
-      const display = document.getElementById('weather-display'); display.innerHTML = ''; const d = weatherDailyData;
-      if (showWeatherToday) {
-        display.innerHTML = `
-          <div class="weather-today">
-            <span style="font-weight:bold; opacity:0.8; font-size:1.2rem;">TODAY</span>
-            <span class="icon">${getWeatherIcon(d.weathercode[0])}</span>
-            <span><span style="color:#ffb366;">H: ${d.temperature_2m_max[0]}℃</span> / <span style="color:#66b3ff;">L: ${d.temperature_2m_min[0]}℃</span></span>
-          </div>`;
-      } else {
-        let html = '<div class="weather-5days">';
-        for (let i = 1; i <= 5; i++) {
-          const date = new Date(d.time[i]);
-          html += `<div class="weather-day"><span>${date.getMonth()+1}/${date.getDate()}</span><span style="font-size:1.4rem;">${getWeatherIcon(d.weathercode[i])}</span><span style="color:#ffb366;">H:${d.temperature_2m_max[i]}</span><span style="color:#66b3ff;">L:${d.temperature_2m_min[i]}</span></div>`;
+        function stopTimer() {
+            config.timerTarget = null;
+            saveConfig();
+            clearInterval(timerInterval);
+            triggerCurtain('timer-display-area', () => {
+                document.getElementById('timer-content').innerHTML = ""; // 空白に戻す
+            });
+            document.getElementById('timer-setup').style.display = 'none';
         }
-        html += '</div>'; display.innerHTML = html;
-      }
-    }
-    setInterval(() => { if(!weatherDailyData) return; showWeatherToday = !showWeatherToday; triggerCurtain('widget-weather', updateWeatherDisplay); }, 30000);
 
-    // --- タイマー ---
-    let timerInterval = null; let remainingTime = 0;
-    function startTimerLogic(seconds) {
-      if (seconds <= 0) { alert('過去の時刻か無効な時間です。'); return; }
-      remainingTime = seconds; 
-      closeModal('timer-modal', 'timer-modal-widget'); 
-      setTimeout(() => {
-        document.getElementById('timer-wrapper').classList.add('show'); 
-        triggerCurtain('widget-timer', updateTimerDisplay, null, true, false);
-      }, 400); 
-      
-      clearInterval(timerInterval);
-      timerInterval = setInterval(() => {
-        remainingTime--; updateTimerDisplay();
-        if (remainingTime <= 0) { 
-          clearInterval(timerInterval); 
-          triggerCurtain('widget-timer', null, () => {
-            document.getElementById('timer-wrapper').classList.remove('show'); 
-          }, true, true);
+        function runTimerLogic() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (!config.timerTarget) return;
+
+                const diff = config.timerTarget - Date.now();
+                if (diff <= 0) {
+                    document.getElementById('timer-content').innerText = "時間です！";
+                    clearInterval(timerInterval);
+                    config.timerTarget = null;
+                    saveConfig();
+                } else {
+                    const h = Math.floor(diff / (1000 * 60 * 60));
+                    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const s = Math.floor((diff % (1000 * 60)) / 1000);
+                    let text = `⏱ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                    if(h > 0) text = `⏱ ${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                    document.getElementById('timer-content').innerText = text;
+                }
+            }, 1000);
         }
-      }, 1000);
-    }
-    function startTimerDuration() {
-      const h = parseInt(document.getElementById('timer-h').value) || 0; const m = parseInt(document.getElementById('timer-m').value) || 0; const s = parseInt(document.getElementById('timer-s').value) || 0;
-      startTimerLogic(h * 3600 + m * 60 + s);
-    }
-    function startTimerUntil() {
-      const timeStr = document.getElementById('timer-until').value; if (!timeStr) return;
-      const [th, tm] = timeStr.split(':').map(Number);
-      const now = new Date(); let targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), th, tm, 0);
-      if (targetDate <= now) targetDate.setDate(targetDate.getDate() + 1);
-      startTimerLogic(Math.floor((targetDate.getTime() - now.getTime()) / 1000));
-    }
-    function stopTimer() { 
-      clearInterval(timerInterval); 
-      closeModal('timer-modal', 'timer-modal-widget');
-      setTimeout(() => {
-        triggerCurtain('widget-timer', null, () => {
-          document.getElementById('timer-wrapper').classList.remove('show'); 
-        }, true, true);
-      }, 400);
-    }
-    function updateTimerDisplay() {
-      const h = String(Math.floor(remainingTime / 3600)).padStart(2, '0'); const m = String(Math.floor((remainingTime % 3600) / 60)).padStart(2, '0'); const s = String(remainingTime % 60).padStart(2, '0');
-      document.getElementById('timer-display').innerText = `${h}:${m}:${s}`;
-    }
 
-  </script>
+        /* =========================================
+           ニュース取得 (5分毎更新、60秒毎切替)
+        ========================================= */
+        async function fetchNews() {
+            try {
+                // RSSをフロントエンドで取得するため、CORSプロキシ(allorigins)を利用
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(config.rssUrl)}`;
+                const response = await fetch(proxyUrl);
+                const data = await response.json();
+                
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(data.contents, "text/xml");
+                const items = xmlDoc.querySelectorAll("item");
+                
+                newsList = [];
+                // 必ず15件取得（足りない場合はある分だけ）
+                for (let i = 0; i < Math.min(items.length, 15); i++) {
+                    newsList.push(items[i].querySelector("title").textContent);
+                }
+            } catch (error) {
+                console.error("News fetch error:", error);
+                newsList = ["ニュースの取得に失敗しました。RSSのURLを確認してください。"];
+            }
+        }
+
+        function cycleNews() {
+            if (newsList.length === 0) return;
+            triggerCurtain('news-widget', () => {
+                document.getElementById('news-content').innerText = newsList[newsIndex];
+                newsIndex = (newsIndex + 1) % newsList.length;
+            });
+        }
+
+        /* =========================================
+           天気取得 (5分毎更新、30秒毎切替)
+        ========================================= */
+        async function fetchWeather() {
+            try {
+                // Open-Meteo APIを利用 (APIキー不要)
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${config.lat}&longitude=${config.lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&current_weather=true&timezone=Asia%2FTokyo`;
+                const response = await fetch(url);
+                weatherData = await response.json();
+            } catch (error) {
+                console.error("Weather fetch error:", error);
+            }
+        }
+
+        function wCodeToStr(code) {
+            if(code <= 3) return "晴/曇";
+            if(code <= 49) return "霧";
+            if(code <= 69) return "雨";
+            if(code <= 79) return "雪";
+            if(code <= 99) return "雷雨";
+            return "不明";
+        }
+
+        function cycleWeather() {
+            if (!weatherData) return;
+            
+            triggerCurtain('weather-widget', () => {
+                const content = document.getElementById('weather-content');
+                
+                if (weatherMode === 0) {
+                    // 今日の天気
+                    const cw = weatherData.current_weather;
+                    content.innerHTML = `現在: ${cw.temperature}°C<br>${wCodeToStr(cw.weathercode)}`;
+                } else if (weatherMode === 1) {
+                    // 5日間 (簡略化のため明日、明後日の2日間表示)
+                    const daily = weatherData.daily;
+                    content.innerHTML = `<span style="font-size:1rem;">
+                        明日: ${daily.temperature_2m_max[1]}°C / ${daily.temperature_2m_min[1]}°C<br>
+                        明後日: ${daily.temperature_2m_max[2]}°C / ${daily.temperature_2m_min[2]}°C
+                    </span>`;
+                } else {
+                    // 注意報 (Open-Meteoは日本の注意報を出さないためダミーまたは風速)
+                    const cw = weatherData.current_weather;
+                    content.innerHTML = `<span style="font-size:1rem; color:var(--main-color);">
+                        風速: ${cw.windspeed} km/h<br>特別な気象警報は取得されていません
+                    </span>`;
+                }
+                
+                weatherMode = (weatherMode + 1) % 3;
+            });
+        }
+
+        /* =========================================
+           設定モーダルの制御
+        ========================================= */
+        function openSettings() {
+            document.getElementById('set-color').value = config.mainColor;
+            document.getElementById('set-font-en').value = config.fontEn;
+            document.getElementById('set-font-ja').value = config.fontJa;
+            document.getElementById('set-rss').value = config.rssUrl;
+            document.getElementById('set-lat').value = config.lat;
+            document.getElementById('set-lon').value = config.lon;
+            document.getElementById('set-event-name').value = config.eventName || '';
+            document.getElementById('set-event-date').value = config.eventDate || '';
+            
+            document.getElementById('settings-modal').style.display = 'flex';
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        function saveSettings() {
+            config.mainColor = document.getElementById('set-color').value;
+            config.fontEn = document.getElementById('set-font-en').value;
+            config.fontJa = document.getElementById('set-font-ja').value;
+            config.rssUrl = document.getElementById('set-rss').value;
+            config.lat = parseFloat(document.getElementById('set-lat').value);
+            config.lon = parseFloat(document.getElementById('set-lon').value);
+            config.eventName = document.getElementById('set-event-name').value;
+            config.eventDate = document.getElementById('set-event-date').value;
+
+            saveConfig();
+            applyConfig();
+            closeSettings();
+            
+            // 即時反映のために再取得・再描画
+            updateCalendar();
+            fetchWeather().then(cycleWeather);
+            fetchNews().then(cycleNews);
+        }
+
+        function resetAll() {
+            if(confirm("すべての設定と情報を初期化しますか？")) {
+                localStorage.removeItem('smartDisplaySettings');
+                location.reload(); // ページをリロードして初期状態に
+            }
+        }
+
+        /* =========================================
+           初期化とタイマーループ
+        ========================================= */
+        window.onload = async () => {
+            loadConfig();
+            updateClock();
+            updateCalendar();
+            
+            // 初回データ取得
+            await fetchNews();
+            await fetchWeather();
+            
+            // 初回表示（カーテンアニメーションを伴う）
+            cycleNews();
+            cycleWeather();
+            
+            // もしリロード前にタイマーが動いていたら再開
+            if (config.timerTarget && config.timerTarget > Date.now()) {
+                document.getElementById('timer-content').innerText = "復元中...";
+                runTimerLogic();
+            }
+
+            // ループ設定
+            setInterval(cycleWeather, 30000); // 天気アニメーション 30秒毎
+            setInterval(cycleNews, 60000);    // ニュースアニメーション 60秒毎
+            
+            setInterval(fetchWeather, 5 * 60 * 1000); // 天気データ更新 5分毎
+            setInterval(fetchNews, 5 * 60 * 1000);    // ニュースデータ更新 5分毎
+        };
+    </script>
 </body>
 </html>
