@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#0b132b">
     <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Smart Display","short_name":"Display","display":"standalone","background_color":"#0b132b","theme_color":"#0b132b","start_url":"."}'>
     
-    <title>Modern Smart Display V7</title>
+    <title>Modern Smart Display V8</title>
     <style>
         @font-face { font-family: 'WRCCleanBold'; src: url('WRCCleanBold.ttf') format('truetype'); font-weight: bold; font-style: normal; }
         @font-face { font-family: 'GenEiLateGop_v2'; src: url('GenEiLateGoP_v2.ttf') format('truetype'); font-weight: normal; font-style: normal; }
@@ -51,10 +51,11 @@
         .widgets-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 3vw; padding: 0 4vw; height: 40vh; box-sizing: border-box; }
         .widget-content { font-size: 2rem; line-height: 1.4; width: 100%; text-align: center; }
 
-        #news-content { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; height: 100%; padding: 25px 20px 10px 20px; box-sizing: border-box; text-align: left; gap: 20px; }
-        #news-text-area { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; height: 100%; overflow: hidden; padding-top: 10px; }
+        /* ニュースのレイアウト調整（上に詰め、高さを確保） */
+        #news-content { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; height: 100%; padding: 15px 20px 10px 20px; box-sizing: border-box; text-align: left; gap: 20px; }
+        #news-text-area { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; height: 100%; overflow: hidden; padding-top: 0; }
         
-        /* ニュースのタイトルと本文の調整 */
+        /* タイトルは大きさ維持、本文は小さめ */
         .news-headline { font-size: 1.8rem; color: var(--main-color); font-weight: bold; margin-bottom: 8px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .news-desc { font-size: 1.1rem; color: #ddd; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
         
@@ -212,8 +213,7 @@
                     <input type="number" id="set-lon" step="0.0001" value="139.6917" style="width: 100%;">
                 </div>
             </div>
-
-            <p style="font-size: 0.8rem; color: #aaa; margin-top: 5px;">※天気の地域名は緯度・経度から自動的に取得されます。</p>
+            <p style="font-size: 0.8rem; color: #aaa; margin-top: 5px;">※保存すると緯度・経度から自動的に地域名を取得します。</p>
 
             <label>Countdown Event Name (予定名)</label>
             <input type="text" id="set-event-name" placeholder="例: 東京旅行" style="width: 100%;">
@@ -235,7 +235,7 @@
         const defaultSettings = {
             mainColor: '#ff8c00', bgUrl: '', 
             rssUrl: 'https://news.yahoo.co.jp/rss/topics/top-picks.xml',
-            lat: 35.6895, lon: 139.6917, cityName: '東京',
+            lat: 35.6895, lon: 139.6917, cityName: '', // 初期値は空にして自動取得させる
             eventName: '', eventDate: '',
             timerTarget: null, timerTotalMs: 0, nextTask: ''
         };
@@ -244,24 +244,23 @@
         let newsList = []; let weatherData = null; let weatherMode = 0; let newsIndex = 0;
 
         function loadConfig() {
-            const saved = localStorage.getItem('smartDisplaySettingsV7');
+            const saved = localStorage.getItem('smartDisplaySettingsV8');
             if (saved) config = { ...config, ...JSON.parse(saved) };
             applyConfig();
         }
 
-        function saveConfig() { localStorage.setItem('smartDisplaySettingsV7', JSON.stringify(config)); }
+        function saveConfig() { localStorage.setItem('smartDisplaySettingsV8', JSON.stringify(config)); }
 
         function applyConfig() {
             document.documentElement.style.setProperty('--main-color', config.mainColor);
             if (config.bgUrl) document.body.style.backgroundImage = `url('${config.bgUrl}')`;
             else document.body.style.backgroundImage = ''; 
-            document.getElementById('weather-title-city').innerText = `- ${config.cityName}`;
+            document.getElementById('weather-title-city').innerText = config.cityName ? `- ${config.cityName}` : '';
         }
 
         // 緯度・経度から市区町村名を逆ジオコーディングで自動取得
         async function fetchCityNameFromCoords(lat, lon) {
             try {
-                // クライアントサイド向けの無料逆ジオコーディングAPIを利用
                 const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ja`);
                 const data = await res.json();
                 return data.locality || data.city || data.principalSubdivision || "現在地";
@@ -405,7 +404,7 @@
             }
         }
 
-        /* ==================== News ==================== */
+        /* ==================== News (Advanced Fetch) ==================== */
         async function fetchNews() {
             try {
                 const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(config.rssUrl)}`);
@@ -413,31 +412,60 @@
                 const items = new DOMParser().parseFromString(data.contents, "text/xml").querySelectorAll("item");
                 newsList = [];
                 for (let i = 0; i < Math.min(items.length, 15); i++) {
-                    const title = items[i].querySelector("title")?.textContent || "", link = items[i].querySelector("link")?.textContent || "";
+                    const title = items[i].querySelector("title")?.textContent || "";
+                    const link = items[i].querySelector("link")?.textContent || "";
+                    // RSSにdescriptionがあれば取得。ない場合は空文字。
                     let desc = items[i].querySelector("description")?.textContent || "";
                     desc = desc.replace(/(<([^>]+)>)/gi, "").trim();
                     newsList.push({ title, link, desc });
                 }
             } catch (error) { newsList = [{ title: "ニュース取得失敗", link: "", desc: "通信を確認してください。" }]; }
         }
-        function cycleNews() {
+
+        async function cycleNewsLogic() {
             if (newsList.length === 0) return;
-            triggerCurtain('news-widget', () => {
-                const current = newsList[newsIndex];
-                document.getElementById('news-headline').innerText = current.title;
-                
-                // 本文を100文字に制限（超える場合は「...」を付与）
-                let truncatedDesc = current.desc;
-                if (truncatedDesc.length > 100) {
-                    truncatedDesc = truncatedDesc.substring(0, 100) + '...';
+            const current = newsList[newsIndex];
+            document.getElementById('news-headline').innerText = current.title;
+            const descElement = document.getElementById('news-desc');
+            
+            // 本文がない（または極端に短い）場合、裏側で実際の記事ページを取得しにいく
+            if (!current.desc || current.desc.length < 10) {
+                descElement.innerText = "詳細を取得中...";
+                if (current.link) {
+                    try {
+                        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(current.link)}`);
+                        const data = await res.json();
+                        const htmlDoc = new DOMParser().parseFromString(data.contents, "text/html");
+                        // 記事ページのmetaタグ（description）から本文の要約を抽出
+                        let metaDesc = htmlDoc.querySelector('meta[name="description"]')?.content || htmlDoc.querySelector('meta[property="og:description"]')?.content || "";
+                        current.desc = metaDesc.replace(/(<([^>]+)>)/gi, "").trim(); 
+                    } catch(e) {
+                        current.desc = "記事の詳細を読み込めませんでした。";
+                    }
                 }
-                document.getElementById('news-desc').innerText = truncatedDesc;
-                
-                const qrContainer = document.getElementById('news-qr-container');
-                if (current.link) { document.getElementById('news-qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(current.link)}`; qrContainer.style.visibility = 'visible'; } 
-                else qrContainer.style.visibility = 'hidden';
-                newsIndex = (newsIndex + 1) % newsList.length;
-            });
+            }
+
+            // 100文字で制限して表示
+            let truncatedDesc = current.desc;
+            if (truncatedDesc.length > 100) {
+                truncatedDesc = truncatedDesc.substring(0, 100) + '...';
+            }
+            if (truncatedDesc === "") truncatedDesc = "詳細情報がありません。";
+            descElement.innerText = truncatedDesc;
+            
+            const qrContainer = document.getElementById('news-qr-container');
+            if (current.link) { 
+                document.getElementById('news-qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(current.link)}`; 
+                qrContainer.style.visibility = 'visible'; 
+            } else {
+                qrContainer.style.visibility = 'hidden';
+            }
+            
+            newsIndex = (newsIndex + 1) % newsList.length;
+        }
+
+        function cycleNews() {
+            triggerCurtain('news-widget', cycleNewsLogic);
         }
 
         /* ==================== Weather ==================== */
@@ -485,11 +513,10 @@
             config.bgUrl = document.getElementById('set-bg-url').value;
             config.rssUrl = document.getElementById('set-rss').value; 
             
-            // 緯度経度から自動で地名を取得
             const newLat = parseFloat(document.getElementById('set-lat').value);
             const newLon = parseFloat(document.getElementById('set-lon').value);
             
-            // もし緯度経度が変わっていたら（または初回）地名を取得し直す
+            // 緯度経度が変わった場合、または地名が未設定の場合に自動取得
             if(config.lat !== newLat || config.lon !== newLon || !config.cityName) {
                 document.getElementById('weather-title-city').innerText = "- 取得中...";
                 config.cityName = await fetchCityNameFromCoords(newLat, newLon);
@@ -504,14 +531,14 @@
             saveConfig(); applyConfig(); closeSettings(); updateCalendar(); 
             fetchWeather().then(cycleWeather); fetchNews().then(cycleNews);
         }
-        function resetAll() { if(confirm("初期化しますか？")) { localStorage.removeItem('smartDisplaySettingsV7'); location.reload(); } }
+        function resetAll() { if(confirm("初期化しますか？")) { localStorage.removeItem('smartDisplaySettingsV8'); location.reload(); } }
 
         /* ==================== Initialization ==================== */
         window.onload = async () => {
             loadConfig(); updateClock(); updateCalendar();
             document.getElementById('news-headline').innerText = "Loading..."; document.getElementById('weather-content').innerText = "Loading...";
             
-            // 初回ロード時に地名が無い場合のフェールセーフ
+            // 初回ロード時に地名がない場合、自動取得して保存
             if(!config.cityName) {
                 config.cityName = await fetchCityNameFromCoords(config.lat, config.lon);
                 saveConfig();
