@@ -2,8 +2,14 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modern Smart Display V3</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0b132b">
+    <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Smart Display","short_name":"Display","display":"standalone","background_color":"#0b132b","theme_color":"#0b132b"}'>
+    
+    <title>Modern Smart Display V4</title>
     <style>
         /* --- ユーザー指定フォントの読み込み --- */
         @font-face {
@@ -21,16 +27,14 @@
 
         /* --- Default Variables --- */
         :root {
-            --bg-color: #0b132b; /* Navy */
-            --main-color: #ff8c00; /* Orange */
-            /* 英数字はWRCCleanBold、日本語はGenEiLateGop_v2を優先適用 */
+            --bg-color: #0b132b;
+            --main-color: #ff8c00;
             --font-main: 'WRCCleanBold', 'GenEiLateGop_v2', sans-serif;
         }
 
         body {
             margin: 0;
             padding: 0;
-            /* 背景画像が未設定の時のデフォルトグラデーション */
             background: radial-gradient(circle at top left, #1a2a50, var(--bg-color));
             background-size: cover;
             background-position: center;
@@ -43,15 +47,17 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            /* 背景画像がある場合に文字を見やすくするための微細なシャドウ */
             text-shadow: 0px 2px 10px rgba(0,0,0,0.5);
+            /* スマホでのテキスト選択などを防止してアプリ感アップ */
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         /* --- Global Curtain Animation --- */
         .curtain-container {
             position: relative;
             overflow: hidden;
-            border-radius: inherit; /* 親の角丸を引き継ぐ */
+            border-radius: inherit;
         }
         .curtain {
             position: absolute;
@@ -61,7 +67,7 @@
             height: 100%;
             background-color: var(--main-color);
             z-index: 50;
-            transform: translateX(-101%); /* 完全に隠す */
+            transform: translateX(-101%);
         }
         @keyframes sweep {
             0% { transform: translateX(-101%); }
@@ -70,9 +76,9 @@
             100% { transform: translateX(101%); }
         }
 
-        /* --- グラスモーフィズム（ウィジェットの枠の質感） --- */
+        /* --- グラスモーフィズム --- */
         .widget-card {
-            background: rgba(10, 15, 30, 0.4); /* 背景があっても見やすいように少し暗めの半透明 */
+            background: rgba(10, 15, 30, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 24px;
             padding: 2vw;
@@ -82,7 +88,7 @@
             justify-content: center;
             align-items: center;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(15px); /* すりガラス効果 */
+            backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
         }
 
@@ -106,7 +112,7 @@
             justify-content: space-between;
             align-items: stretch;
             gap: 3vw;
-            height: 25vh; /* 高さを少し詰める */
+            height: 25vh;
             box-sizing: border-box;
         }
         
@@ -130,9 +136,8 @@
             letter-spacing: 2px;
         }
 
-        /* 天気ウィジェット（時計の横・横長） */
         #weather-widget {
-            flex: 1; /* 残りの幅を埋める */
+            flex: 1;
             text-align: center;
         }
         #weather-content {
@@ -143,7 +148,6 @@
             justify-content: center;
             height: 100%;
         }
-        /* 5日間予報用のレイアウト */
         .forecast-container {
             display: flex;
             justify-content: space-between;
@@ -159,7 +163,7 @@
         /* --- Main Widgets (Calendar & News) --- */
         .widgets-grid {
             display: grid;
-            grid-template-columns: 1fr 2fr; /* カレンダー 1 : ニュース 2 の比率 */
+            grid-template-columns: 1fr 2fr;
             gap: 3vw;
             padding: 0 4vw;
             height: 40vh;
@@ -173,7 +177,6 @@
             text-align: center;
         }
 
-        /* ニュースは拡張表示＋QRコード */
         #news-content {
             display: flex;
             align-items: center;
@@ -198,11 +201,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            background: rgba(255,255,255,0.8); /* QRが読みやすいように白背景 */
+            background: rgba(255,255,255,0.8);
             padding: 10px;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            text-shadow: none; /* QRの文字はシャドウなし */
+            text-shadow: none;
             color: #000;
         }
         #news-qr-container img {
@@ -227,18 +230,51 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            height: 12vh;
+            height: 15vh;
             box-sizing: border-box;
         }
 
-        /* タイマー表示エリア (空白は残しつつアニメーションを安定化) */
+        /* タイマー表示エリアとプログレスバー */
         #timer-display-area {
+            min-width: 350px;
+            width: 400px;
+            height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        #timer-text-container {
             font-size: 4.5rem;
             color: var(--main-color);
-            min-width: 350px;
-            height: 80px; /* 高さを固定してガタつき防止 */
-            display: flex;
-            align-items: center;
+            line-height: 1;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        #timer-progress-bg {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            display: none; /* 初期状態は非表示 */
+        }
+        #timer-progress-fill {
+            height: 100%;
+            width: 100%;
+            background: var(--main-color);
+            transition: width 1s linear;
+            box-shadow: 0 0 10px var(--main-color);
+        }
+
+        /* 終了時のパルスアニメーション */
+        @keyframes pulseGlow {
+            0% { text-shadow: 0 0 10px var(--main-color); opacity: 1; }
+            50% { text-shadow: 0 0 40px var(--main-color), 0 0 20px #fff; opacity: 0.8; transform: scale(1.02); }
+            100% { text-shadow: 0 0 10px var(--main-color); opacity: 1; }
+        }
+        .timer-finished {
+            animation: pulseGlow 1.5s infinite ease-in-out;
+            color: #fff !important;
         }
 
         .controls {
@@ -258,6 +294,7 @@
             font-family: inherit;
             transition: all 0.3s ease;
             backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
         }
         button:hover {
             background-color: var(--main-color);
@@ -282,6 +319,7 @@
             border-radius: 16px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
             min-width: 250px;
         }
         .timer-row {
@@ -314,6 +352,7 @@
             justify-content: center;
             align-items: center;
             backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
         .settings-content {
             background: rgba(11, 19, 43, 0.9);
@@ -326,7 +365,6 @@
             max-height: 85vh;
             overflow-y: auto;
             box-shadow: 0 25px 50px rgba(0,0,0,0.6);
-            backdrop-filter: blur(20px);
         }
         .settings-content h2 { margin-top: 0; font-weight: normal; }
         .settings-content label {
@@ -356,7 +394,6 @@
     </div>
 
     <div class="widgets-grid">
-        
         <div id="calendar-widget" class="widget-card curtain-container">
             <div class="widget-title">Calendar</div>
             <div class="curtain"></div>
@@ -374,14 +411,16 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     <div class="footer">
         
         <div id="timer-display-area" class="curtain-container">
             <div class="curtain" id="timer-curtain"></div>
-            <div id="timer-content"></div>
+            <div id="timer-text-container"></div>
+            <div id="timer-progress-bg">
+                <div id="timer-progress-fill"></div>
+            </div>
         </div>
 
         <div class="controls">
@@ -448,32 +487,30 @@
     </div>
 
     <script>
-        /* =========================================
-           Configuration & State Management
-        ========================================= */
         const defaultSettings = {
             mainColor: '#ff8c00', 
-            bgUrl: '', // 背景画像のURL
+            bgUrl: '', 
             rssUrl: 'https://news.yahoo.co.jp/rss/topics/top-picks.xml',
             lat: 35.6895, lon: 139.6917, 
             eventName: '', eventDate: '',
-            timerTarget: null 
+            timerTarget: null,
+            timerTotalMs: 0 // プログレスバー計算用にセットした総時間を保存
         };
 
         let config = { ...defaultSettings };
-        let newsList = []; // {title: string, link: string} の配列
+        let newsList = []; 
         let weatherData = null;
-        let weatherMode = 0; // 0:今日, 1:5日間, 2:注意報
+        let weatherMode = 0; 
         let newsIndex = 0;
 
         function loadConfig() {
-            const saved = localStorage.getItem('smartDisplaySettingsV3');
+            const saved = localStorage.getItem('smartDisplaySettingsV4');
             if (saved) config = { ...config, ...JSON.parse(saved) };
             applyConfig();
         }
 
         function saveConfig() {
-            localStorage.setItem('smartDisplaySettingsV3', JSON.stringify(config));
+            localStorage.setItem('smartDisplaySettingsV4', JSON.stringify(config));
         }
 
         function applyConfig() {
@@ -481,30 +518,24 @@
             if (config.bgUrl) {
                 document.body.style.backgroundImage = `url('${config.bgUrl}')`;
             } else {
-                document.body.style.backgroundImage = ''; // デフォルトグラデーションに戻る
+                document.body.style.backgroundImage = ''; 
             }
         }
 
-        /* =========================================
-           Curtain Animation Controller
-        ========================================= */
         function triggerCurtain(containerId, updateFunction) {
             const container = document.getElementById(containerId);
             const curtain = container.querySelector('.curtain');
             
             curtain.style.animation = 'none';
-            void curtain.offsetWidth; // Force reflow
+            void curtain.offsetWidth; 
             curtain.style.animation = 'sweep 1.2s cubic-bezier(0.77, 0, 0.175, 1) forwards';
             
-            // アニメーションで画面が覆われたタイミングで中身を更新
             setTimeout(() => {
                 if(updateFunction) updateFunction();
             }, 550);
         }
 
-        /* =========================================
-           Clock Widget
-        ========================================= */
+        /* ==================== Clock ==================== */
         function updateClock() {
             const now = new Date();
             const hh = String(now.getHours()).padStart(2, '0');
@@ -519,9 +550,7 @@
         }
         setInterval(updateClock, 1000);
 
-        /* =========================================
-           Calendar Widget
-        ========================================= */
+        /* ==================== Calendar ==================== */
         function updateCalendar() {
             const content = document.getElementById('calendar-content');
             if (!config.eventDate || !config.eventName) {
@@ -551,9 +580,7 @@
         }
         setInterval(updateCalendar, 1000 * 60 * 60);
 
-        /* =========================================
-           Timer Logic (アニメーション修正版)
-        ========================================= */
+        /* ==================== Timer (Animation Enhanced) ==================== */
         let timerInterval;
 
         function toggleTimerSetup() {
@@ -579,48 +606,69 @@
             } else return;
 
             config.timerTarget = targetMs;
+            config.timerTotalMs = targetMs - Date.now(); // プログレスバー用の総時間を記録
             saveConfig();
-            document.getElementById('timer-setup').style.display = 'none';
             
-            triggerCurtain('timer-display-area', () => { runTimerLogic(); });
+            document.getElementById('timer-setup').style.display = 'none';
+            document.getElementById('timer-text-container').classList.remove('timer-finished');
+            
+            triggerCurtain('timer-display-area', () => { 
+                document.getElementById('timer-progress-bg').style.display = 'block';
+                runTimerLogic(); 
+            });
         }
 
         function stopTimer() {
             config.timerTarget = null;
+            config.timerTotalMs = 0;
             saveConfig();
             clearInterval(timerInterval);
+            
             triggerCurtain('timer-display-area', () => {
-                document.getElementById('timer-content').innerHTML = ""; 
+                document.getElementById('timer-text-container').innerText = ""; 
+                document.getElementById('timer-text-container').classList.remove('timer-finished');
+                document.getElementById('timer-progress-bg').style.display = 'none';
             });
             document.getElementById('timer-setup').style.display = 'none';
         }
 
         function runTimerLogic() {
             clearInterval(timerInterval);
+            const textContainer = document.getElementById('timer-text-container');
+            const progressFill = document.getElementById('timer-progress-fill');
+            
             timerInterval = setInterval(() => {
                 if (!config.timerTarget) return;
 
                 const diff = config.timerTarget - Date.now();
-                const content = document.getElementById('timer-content');
+                
                 if (diff <= 0) {
-                    content.innerText = "TIME'S UP!";
+                    textContainer.innerText = "TIME'S UP!";
+                    textContainer.classList.add('timer-finished'); // 発光アニメーション開始
+                    progressFill.style.width = "0%";
                     clearInterval(timerInterval);
                     config.timerTarget = null;
                     saveConfig();
                 } else {
+                    // テキストの更新
                     const h = Math.floor(diff / (1000 * 60 * 60));
                     const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                     const s = Math.floor((diff % (1000 * 60)) / 1000);
                     let text = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
                     if(h > 0) text = `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-                    content.innerText = text;
+                    textContainer.innerText = text;
+
+                    // プログレスバーの更新（残りの割合を計算）
+                    let percentage = 0;
+                    if(config.timerTotalMs > 0) {
+                        percentage = Math.max(0, (diff / config.timerTotalMs) * 100);
+                    }
+                    progressFill.style.width = `${percentage}%`;
                 }
             }, 1000);
         }
 
-        /* =========================================
-           News Widget (QRコード連携)
-        ========================================= */
+        /* ==================== News ==================== */
         async function fetchNews() {
             try {
                 const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(config.rssUrl)}`;
@@ -653,7 +701,6 @@
                 const qrImg = document.getElementById('news-qr-img');
                 
                 if (currentNews.link) {
-                    // 外部APIを使用してリンク先URLのQRコード画像を生成
                     qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(currentNews.link)}`;
                     qrContainer.style.visibility = 'visible';
                 } else {
@@ -664,19 +711,15 @@
             });
         }
 
-        /* =========================================
-           Weather Widget (日本語対応・5日間表示)
-        ========================================= */
+        /* ==================== Weather ==================== */
         async function fetchWeather() {
             try {
-                // daily=... に5日間分以上のデータが含まれるように指定
                 const url = `https://api.open-meteo.com/v1/forecast?latitude=${config.lat}&longitude=${config.lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&current_weather=true&timezone=Asia%2FTokyo`;
                 const response = await fetch(url);
                 weatherData = await response.json();
             } catch (error) {}
         }
 
-        // 天気コードを日本語に変換
         function wCodeToJa(code) {
             if(code <= 3) return "晴れ / 曇り";
             if(code <= 49) return "霧";
@@ -701,7 +744,6 @@
                 const content = document.getElementById('weather-content');
                 
                 if (weatherMode === 0) {
-                    // 今日の天気
                     const cw = weatherData.current_weather;
                     content.innerHTML = `
                         <div style="font-size: 1.5rem; color: #ddd; margin-bottom: 5px;">現在の天気</div>
@@ -710,16 +752,14 @@
                             <span style="font-size: 2rem; color: #fff;">${wCodeToJa(cw.weathercode)}</span>
                         </div>`;
                 } else if (weatherMode === 1) {
-                    // 明日から5日間の天気（横並び）
                     const daily = weatherData.daily;
                     let html = `<div style="font-size: 1.2rem; color: #ddd; margin-bottom: 10px;">明日から5日間の予報</div>
                                 <div class="forecast-container">`;
                     
-                    // index 1(明日) から 5 までループ
                     for (let i = 1; i <= 5; i++) {
                         if(!daily.time[i]) break;
                         const dayStr = getDayOfWeek(daily.time[i]);
-                        const wStr = wCodeToJa(daily.weathercode[i]).split(' ')[0]; // 簡略化して最初の単語だけ
+                        const wStr = wCodeToJa(daily.weathercode[i]).split(' ')[0]; 
                         
                         html += `
                             <div class="forecast-item">
@@ -735,7 +775,6 @@
                     content.innerHTML = html;
 
                 } else {
-                    // 注意報（ダミー/風速情報）
                     const cw = weatherData.current_weather;
                     content.innerHTML = `
                         <div style="font-size: 1.5rem; color: #ddd; margin-bottom: 10px;">気象情報・注意報</div>
@@ -747,9 +786,7 @@
             });
         }
 
-        /* =========================================
-           Settings Management
-        ========================================= */
+        /* ==================== Settings ==================== */
         function openSettings() {
             document.getElementById('set-color').value = config.mainColor;
             document.getElementById('set-bg-url').value = config.bgUrl || '';
@@ -785,14 +822,12 @@
 
         function resetAll() {
             if(confirm("すべての設定とデータを初期化しますか？")) {
-                localStorage.removeItem('smartDisplaySettingsV3');
+                localStorage.removeItem('smartDisplaySettingsV4');
                 location.reload(); 
             }
         }
 
-        /* =========================================
-           Initialization & Loops
-        ========================================= */
+        /* ==================== Initialization ==================== */
         window.onload = async () => {
             loadConfig();
             updateClock();
@@ -808,7 +843,7 @@
             cycleWeather();
             
             if (config.timerTarget && config.timerTarget > Date.now()) {
-                document.getElementById('timer-content').innerText = "Resuming...";
+                document.getElementById('timer-progress-bg').style.display = 'block';
                 runTimerLogic();
             }
 
