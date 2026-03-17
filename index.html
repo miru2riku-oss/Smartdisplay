@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#0b132b">
     <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Smart Display","short_name":"Display","display":"standalone","background_color":"#0b132b","theme_color":"#0b132b","start_url":"."}'>
     
-    <title>Modern Smart Display V11 (Responsive)</title>
+    <title>Modern Smart Display V12 (Force FHD)</title>
     <style>
         @font-face { font-family: 'WRCCleanBold'; src: url('WRCCleanBold.ttf') format('truetype'); font-weight: bold; font-style: normal; }
         @font-face { font-family: 'GenEiLateGop_v2'; src: url('GenEiLateGoP_v2.ttf') format('truetype'); font-weight: normal; font-style: normal; }
@@ -20,13 +20,31 @@
         body {
             margin: 0; padding: 0; background: radial-gradient(circle at top left, #1a2a50, var(--bg-color));
             background-size: cover; background-position: center; background-repeat: no-repeat;
-            color: #ffffff; font-family: var(--font-main); width: 100vw; height: 100vh;
-            display: flex; flex-direction: column; justify-content: space-between;
+            color: #ffffff; font-family: var(--font-main); 
+            /* 画面全体の中央に配置するための設定 */
+            display: flex; align-items: center; justify-content: center;
+            width: 100vw; height: 100vh; overflow: hidden;
             text-shadow: 0px 2px 10px rgba(0,0,0,0.5); user-select: none; -webkit-user-select: none;
-            overflow: hidden; /* PCではスクロールなし */
+            overscroll-behavior: none;
         }
 
-        /* --- GPU最適化 --- */
+        /* アプリ全体のコンテナ（ここで比率とサイズを管理します） */
+        #app-container {
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: space-between;
+            position: relative;
+        }
+
+        /* 強制FULLHDモード時のスタイル */
+        .force-fhd-mode #app-container {
+            width: 1920px !important;
+            height: 1080px !important;
+            flex-shrink: 0;
+            transform-origin: center center;
+            /* transform: scale() はJSで計算して付与されます */
+        }
+
+        /* --- GPU最適化とアニメーション --- */
         .curtain-container { position: relative; overflow: hidden; border-radius: inherit; }
         .curtain { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--main-color); 
@@ -40,58 +58,58 @@
         }
 
         .widget-card {
-            background: rgba(10, 15, 30, 0.4); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 24px; padding: 2vw; position: relative;
+            background: rgba(10, 15, 30, 0.4); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 24px; padding: 30px; position: relative;
             display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: #ffffff;
             transform: translateZ(0); contain: layout style; will-change: transform, opacity;
         }
 
-        .widget-title { position: absolute; top: 20px; left: 25px; font-size: clamp(0.8rem, 2vw, 1rem); color: #ffffff; opacity: 0.6; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; font-family: 'WRCCleanBold', sans-serif; text-shadow: none; display: flex; gap: 10px; }
+        .widget-title { position: absolute; top: 20px; left: 25px; font-size: 1rem; color: #ffffff; opacity: 0.6; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; font-family: 'WRCCleanBold', sans-serif; text-shadow: none; display: flex; gap: 10px; }
         #weather-title-city { font-family: 'GenEiLateGop_v2', sans-serif; color: #ffffff; opacity: 1; }
 
-        /* --- レイアウト構造 --- */
-        .header { padding: 2vw 4vw 1vw 4vw; display: flex; justify-content: space-between; align-items: stretch; gap: 3vw; height: 25vh; box-sizing: border-box; }
+        /* レイアウト構造 (% と px を使って縮小時に崩れないようにする) */
+        .header { padding: 3% 4% 1% 4%; display: flex; justify-content: space-between; align-items: stretch; gap: 40px; height: 25%; box-sizing: border-box; }
         #clock-widget { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; }
-        .time-large { font-size: clamp(4rem, 8vw, 7.5rem); line-height: 0.85; margin: 0; letter-spacing: -2px; color: #ffffff; }
-        .date-small { font-size: clamp(1rem, 2vw, 1.5rem); color: #ffffff; margin: 10px 0 0 5px; text-transform: uppercase; letter-spacing: 2px; }
+        .time-large { font-size: 7.5rem; line-height: 0.85; margin: 0; letter-spacing: -2px; color: #ffffff; }
+        .date-small { font-size: 1.5rem; color: #ffffff; margin: 15px 0 0 5px; text-transform: uppercase; letter-spacing: 2px; }
 
         #weather-widget { flex: 1; text-align: center; }
         #weather-content { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #ffffff; }
         .forecast-container { display: flex; justify-content: space-between; width: 90%; margin-top: 10px; }
         .forecast-item { display: flex; flex-direction: column; align-items: center; }
 
-        .widgets-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 3vw; padding: 0 4vw; height: 40vh; box-sizing: border-box; }
-        .widget-content { font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.4; width: 100%; text-align: center; color: #ffffff; }
+        .widgets-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 40px; padding: 0 4%; height: 45%; box-sizing: border-box; }
+        .widget-content { font-size: 2rem; line-height: 1.4; width: 100%; text-align: center; color: #ffffff; }
 
         #news-content { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 100%; padding: 20px; box-sizing: border-box; text-align: left; gap: 20px; }
         #news-text-area { flex: 1; display: flex; flex-direction: column; justify-content: center; height: 100%; overflow: hidden; }
-        .news-sub { font-size: clamp(0.9rem, 1.5vw, 1.1rem); color: #ffffff; opacity: 0.5; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; margin: 5px 0; }
-        .news-headline { font-size: clamp(1.2rem, 2.5vw, 1.8rem); color: #ffffff; font-weight: bold; margin: 10px 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        #news-qr-container { width: 130px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-shadow: none; color: #000; align-self: center; }
-        #news-qr-container img { width: 100%; height: auto; border-radius: 5px; aspect-ratio: 1; }
-        #news-qr-container span { font-size: 0.75rem; margin-top: 8px; font-family: 'GenEiLateGop_v2', sans-serif; font-weight: bold; text-align: center; }
+        
+        .news-sub { font-size: 1.1rem; color: #ffffff; opacity: 0.5; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; margin: 5px 0; }
+        .news-headline { font-size: 1.8rem; color: #ffffff; font-weight: bold; margin: 10px 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        #news-qr-container { width: 150px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-shadow: none; color: #000; align-self: center; }
+        #news-qr-container img { width: 130px; height: 130px; border-radius: 5px; }
+        #news-qr-container span { font-size: 0.8rem; margin-top: 8px; font-family: 'GenEiLateGop_v2', sans-serif; font-weight: bold; }
 
         .highlight { color: #ffffff; }
-        .footer { padding: 1vw 4vw 2vw 4vw; display: flex; justify-content: space-between; align-items: flex-end; height: 17vh; box-sizing: border-box; }
+        .footer { padding: 1% 4% 3% 4%; display: flex; justify-content: space-between; align-items: flex-end; height: 20%; box-sizing: border-box; }
 
-        /* --- タイマー --- */
-        #timer-display-area { visibility: hidden; border-radius: 24px; height: 130px; display: flex; align-items: center; transition: width 0.3s ease; box-sizing: border-box; background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; color: #ffffff; width: 350px; max-width: 100%; }
-        #timer-display-area.timer-expanded { width: 700px; } /* 展開時のクラス */
-        
-        #timer-content-wrapper { display: flex; width: 100%; align-items: center; opacity: 0; padding-top: 20px; box-sizing: border-box; }
+        #timer-display-area { visibility: hidden; border-radius: 24px; height: 130px; display: flex; align-items: center; transition: width 0.3s ease; box-sizing: border-box; background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; color: #ffffff; }
+        #timer-content-wrapper { display: flex; width: 100%; align-items: center; opacity: 0; padding-top: 20px; }
         #timer-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        #timer-text-container { font-size: clamp(3rem, 6vw, 4.5rem); color: #ffffff; line-height: 1; margin-bottom: 10px; text-align: center; }
+        #timer-text-container { font-size: 4.5rem; color: #ffffff; line-height: 1; margin-bottom: 10px; text-align: center; }
         #timer-progress-bg { width: 100%; height: 6px; background: rgba(255, 255, 255, 0.2); border-radius: 3px; overflow: hidden; }
         #timer-progress-fill { height: 100%; width: 100%; background: var(--main-color); transform-origin: left; transform: scaleX(1); transition: transform 1s linear; box-shadow: 0 0 10px var(--main-color); will-change: transform; }
         #timer-right { display: none; flex: 1; flex-direction: column; justify-content: center; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 20px; margin-left: 20px; }
-        #timer-next-label { font-size: 0.8rem; color: #ffffff; opacity: 0.6; letter-spacing: 2px; font-family: 'WRCCleanBold', sans-serif; }
-        #timer-next-text { font-size: clamp(1.2rem, 2.5vw, 1.5rem); font-family: 'GenEiLateGop_v2', sans-serif; margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #ffffff; }
+        #timer-next-label { font-size: 0.9rem; color: #ffffff; opacity: 0.6; letter-spacing: 2px; font-family: 'WRCCleanBold', sans-serif; }
+        #timer-next-text { font-size: 1.5rem; font-family: 'GenEiLateGop_v2', sans-serif; margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #ffffff; }
 
         .controls { display: flex; gap: 15px; position: relative; }
-        button { background-color: rgba(0, 0, 0, 0.5); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); padding: 12px 24px; font-size: clamp(0.9rem, 2vw, 1.1rem); border-radius: 50px; cursor: pointer; font-family: inherit; transition: all 0.3s ease; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transform: translateZ(0); white-space: nowrap; }
+        button { background-color: rgba(0, 0, 0, 0.5); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); padding: 12px 24px; font-size: 1.1rem; border-radius: 50px; cursor: pointer; font-family: inherit; transition: all 0.3s ease; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transform: translateZ(0); }
         button:hover { background-color: var(--main-color); border-color: var(--main-color); color: var(--bg-color); }
         .btn-primary { background-color: var(--main-color); border-color: var(--main-color); color: var(--bg-color); }
 
+        /* 設定などのモーダルは画面全体にかぶせるためコンテナ外の基準でOK */
         .glass-modal { background: rgba(11, 19, 43, 0.85); border: 1px solid var(--main-color); border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transform: translateZ(0); }
         #timer-setup { display: none; position: absolute; bottom: 70px; right: 0; padding: 25px; min-width: 280px; z-index: 101; }
         .timer-row { margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; width: 100%; }
@@ -99,197 +117,114 @@
         input[type="number"] { width: 80px; }
         input:focus { outline: none; border-color: var(--main-color); }
 
-        #settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transform: translateZ(0); }
-        .settings-content { padding: 40px; border-top: 4px solid var(--main-color); width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; box-sizing: border-box; }
-        .settings-content h2 { margin-top: 0; font-weight: normal; font-size: clamp(1.5rem, 4vw, 2rem); }
+        #settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transform: translateZ(0); }
+        .settings-content { padding: 40px; border-top: 4px solid var(--main-color); width: 80%; max-width: 600px; max-height: 85vh; overflow-y: auto; }
+        .settings-content h2 { margin-top: 0; font-weight: normal; }
         .settings-content label { display: block; margin-top: 20px; color: rgba(255, 255, 255, 0.8); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
         .settings-content input { margin-top: 8px; }
-        .settings-actions { margin-top: 40px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .settings-actions { margin-top: 40px; display: flex; justify-content: space-between; }
         .btn-danger { border-color: #ff4444; color: #ff4444; }
         .btn-danger:hover { background-color: #ff4444; color: white; }
-        .file-upload-wrapper { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
-        .file-upload-wrapper input[type="file"] { border: none; background: none; padding: 0; font-family: inherit; width: 100%; }
+        .file-upload-wrapper { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+        .file-upload-wrapper input[type="file"] { border: none; background: none; padding: 0; font-family: inherit; }
 
-        /* =========================================
-           スマホ向けレスポンシブデザイン (画面幅768px以下)
-        ========================================= */
-        @media (max-width: 768px) {
-            body {
-                height: 100svh; /* スマホのアドレスバーを考慮した高さ */
-                overflow-y: auto; /* 縦長画面ではスクロールを許可 */
-                display: block; /* 全体Flexを解除して自然な縦積みに */
-            }
-            .header {
-                flex-direction: column;
-                height: auto;
-                text-align: center;
-                gap: 15px;
-                padding: 20px;
-            }
-            #clock-widget { align-items: center; }
-            .widgets-grid {
-                display: flex;
-                flex-direction: column;
-                height: auto;
-                gap: 15px;
-                padding: 0 20px;
-            }
-            .widget-card {
-                padding: 25px 20px;
-                min-height: 180px;
-            }
-            .widget-title { top: 15px; left: 20px; }
-            #news-content {
-                flex-direction: column;
-                padding: 10px;
-            }
-            #news-qr-container {
-                flex-direction: row;
-                width: 100%;
-                justify-content: center;
-                margin-top: 15px;
-                gap: 15px;
-            }
-            #news-qr-container img { width: 70px; }
-            #news-qr-container span { margin-top: 0; align-self: center; text-align: left; }
-            
-            .footer {
-                flex-direction: column;
-                height: auto;
-                padding: 20px;
-                gap: 20px;
-                align-items: center;
-                margin-bottom: 20px;
-            }
-            /* タイマーもスマホ画面幅に合わせる */
-            #timer-display-area, #timer-display-area.timer-expanded {
-                width: 100% !important;
-                height: auto;
-                padding-bottom: 20px;
-            }
-            #timer-content-wrapper {
-                flex-direction: column;
-                padding-top: 30px;
-                gap: 15px;
-            }
-            #timer-right {
-                border-left: none;
-                border-top: 1px solid rgba(255,255,255,0.2);
-                margin-left: 0; padding-left: 0; padding-top: 15px;
-                width: 100%; text-align: center;
-            }
-            .controls {
-                width: 100%;
-                justify-content: space-evenly;
-            }
-            #timer-setup {
-                bottom: 80px;
-                right: 50%;
-                transform: translateX(50%);
-                width: 90%;
-            }
-            .settings-content {
-                padding: 25px;
-                width: 95%;
-            }
-            .settings-actions {
-                flex-direction: column;
-            }
-            .settings-actions div {
-                display: flex;
-                width: 100%;
-                gap: 10px;
-            }
-            .settings-actions button { width: 100%; }
-        }
+        /* スケール管理用のクラス */
+        .setting-checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; margin-top: 20px; color: #fff; font-size: 1.1rem; }
+        .setting-checkbox-label input[type="checkbox"] { width: 22px; height: 22px; margin: 0; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <div id="clock-widget">
-            <div id="clock-content">
-                <p class="time-large" id="time-text">00:00:00</p>
-                <p class="date-small" id="date-text">Month 00, YYYY (Day)</p>
-            </div>
-        </div>
-        <div id="weather-widget" class="widget-card curtain-container">
-            <div class="widget-title">Weather <span id="weather-title-city"></span></div>
-            <div class="curtain"></div>
-            <div id="weather-content">取得中...</div>
-        </div>
-    </div>
-
-    <div class="widgets-grid">
-        <div id="calendar-widget" class="widget-card curtain-container">
-            <div class="widget-title">Calendar</div>
-            <div class="curtain"></div>
-            <div id="calendar-content" class="widget-content">Loading...</div>
-        </div>
-        <div id="news-widget" class="widget-card curtain-container">
-            <div class="widget-title">News</div>
-            <div class="curtain"></div>
-            <div id="news-content">
-                <div id="news-text-area">
-                    <div class="news-sub" id="news-prev"></div>
-                    <div class="news-headline" id="news-headline">ニュースを取得中...</div>
-                    <div class="news-sub" id="news-next"></div>
-                </div>
-                <div id="news-qr-container" style="visibility: hidden;">
-                    <img id="news-qr-img" src="" alt="QR Code">
-                    <span>続きはQRコードで</span>
+    <div id="app-container">
+        <div class="header">
+            <div id="clock-widget">
+                <div id="clock-content">
+                    <p class="time-large" id="time-text">00:00:00</p>
+                    <p class="date-small" id="date-text">Month 00, YYYY (Day)</p>
                 </div>
             </div>
+            <div id="weather-widget" class="widget-card curtain-container">
+                <div class="widget-title">Weather <span id="weather-title-city"></span></div>
+                <div class="curtain"></div>
+                <div id="weather-content">取得中...</div>
+            </div>
         </div>
-    </div>
 
-    <div class="footer">
-        <div id="timer-display-area" class="curtain-container">
-            <div class="widget-title" id="timer-title" style="display: none;">TIMER</div>
-            <div class="curtain" id="timer-curtain"></div>
-            <div id="timer-content-wrapper">
-                <div id="timer-left">
-                    <div id="timer-text-container"></div>
-                    <div id="timer-progress-bg">
-                        <div id="timer-progress-fill"></div>
+        <div class="widgets-grid">
+            <div id="calendar-widget" class="widget-card curtain-container">
+                <div class="widget-title">Calendar</div>
+                <div class="curtain"></div>
+                <div id="calendar-content" class="widget-content">Loading...</div>
+            </div>
+            <div id="news-widget" class="widget-card curtain-container">
+                <div class="widget-title">News</div>
+                <div class="curtain"></div>
+                <div id="news-content">
+                    <div id="news-text-area">
+                        <div class="news-sub" id="news-prev"></div>
+                        <div class="news-headline" id="news-headline">ニュースを取得中...</div>
+                        <div class="news-sub" id="news-next"></div>
+                    </div>
+                    <div id="news-qr-container" style="visibility: hidden;">
+                        <img id="news-qr-img" src="" alt="QR Code">
+                        <span>続きはQRコードで</span>
                     </div>
                 </div>
-                <div id="timer-right">
-                    <div id="timer-next-label">COMING UP NEXT</div>
-                    <div id="timer-next-text"></div>
-                </div>
             </div>
         </div>
 
-        <div class="controls">
-            <div id="timer-setup" class="glass-modal">
-                <div class="timer-row">
-                    <input type="number" id="timer-minutes" placeholder="0"> 
-                    <span style="white-space: nowrap; margin-left: 10px;">分 (Mins)</span>
-                </div>
-                <div class="timer-row" style="justify-content: center; font-size: 0.9rem; color: #888;">
-                    - または時刻指定 -
-                </div>
-                <div class="timer-row">
-                    <input type="time" id="timer-time">
-                </div>
-                <div class="timer-row" style="margin-top: 15px;">
-                    <input type="text" id="timer-next-task" placeholder="次にやること (任意)">
-                </div>
-                <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button class="btn-primary" onclick="startTimer()" style="flex:1;">Start</button>
-                    <button class="btn-danger" onclick="stopTimer()" style="flex:1;">Stop</button>
+        <div class="footer">
+            <div id="timer-display-area" class="curtain-container">
+                <div class="widget-title" id="timer-title" style="display: none;">TIMER</div>
+                <div class="curtain" id="timer-curtain"></div>
+                <div id="timer-content-wrapper">
+                    <div id="timer-left">
+                        <div id="timer-text-container"></div>
+                        <div id="timer-progress-bg">
+                            <div id="timer-progress-fill"></div>
+                        </div>
+                    </div>
+                    <div id="timer-right">
+                        <div id="timer-next-label">COMING UP NEXT</div>
+                        <div id="timer-next-text"></div>
+                    </div>
                 </div>
             </div>
-            <button onclick="toggleTimerSetup()">Timer</button>
-            <button onclick="openSettings()">Settings</button>
-        </div>
-    </div>
 
-    <div id="settings-modal">
+            <div class="controls">
+                <div id="timer-setup" class="glass-modal">
+                    <div class="timer-row">
+                        <input type="number" id="timer-minutes" placeholder="0"> 
+                        <span style="white-space: nowrap; margin-left: 10px;">分 (Mins)</span>
+                    </div>
+                    <div class="timer-row" style="justify-content: center; font-size: 0.9rem; color: #888;">
+                        - または時刻指定 -
+                    </div>
+                    <div class="timer-row">
+                        <input type="time" id="timer-time">
+                    </div>
+                    <div class="timer-row" style="margin-top: 15px;">
+                        <input type="text" id="timer-next-task" placeholder="次にやること (任意)">
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button class="btn-primary" onclick="startTimer()" style="flex:1;">Start</button>
+                        <button class="btn-danger" onclick="stopTimer()" style="flex:1;">Stop</button>
+                    </div>
+                </div>
+                <button onclick="toggleTimerSetup()">Timer</button>
+                <button onclick="openSettings()">Settings</button>
+            </div>
+        </div>
+    </div> <div id="settings-modal">
         <div class="settings-content glass-modal">
             <h2><span class="highlight">System</span> Settings</h2>
             
+            <label class="setting-checkbox-label">
+                <input type="checkbox" id="set-force-fhd">
+                強制FULLHDモード (比率を維持して全画面にフィット)
+            </label>
+            <p style="font-size: 0.8rem; color: #aaa; margin-top: 5px; margin-bottom: 20px;">※スマホなどでレイアウトが崩れる場合はオンにしてください。</p>
+
             <label>Main Theme Color</label>
             <input type="color" id="set-color" value="#ff8c00" style="height: 40px; padding: 0; border: none; background: none; cursor: pointer;">
 
@@ -299,7 +234,7 @@
             <label>背景画像 (端末からアップロード)</label>
             <div class="file-upload-wrapper">
                 <input type="file" id="set-bg-file" accept="image/*">
-                <span style="font-size: 0.8rem; color: #aaa; width: 100%;">(自動で圧縮保存されます)</span>
+                <span style="font-size: 0.8rem; color: #aaa;">(自動で圧縮保存されます)</span>
             </div>
 
             <label>News RSS URL</label>
@@ -325,7 +260,7 @@
 
             <div class="settings-actions">
                 <button class="btn-danger" onclick="resetAll()">全設定リセット</button>
-                <div>
+                <div style="display: flex; gap: 10px;">
                     <button onclick="closeSettings()">Cancel</button>
                     <button class="btn-primary" onclick="saveSettings()">Save Changes</button>
                 </div>
@@ -338,12 +273,14 @@
     </div>
 
     <script>
+        // デフォルトで強制FULLHDをONにしておく（スマホで開いた時のため）
         const defaultSettings = {
             mainColor: '#ff8c00', bgUrl: '', 
             rssUrl: 'https://news.yahoo.co.jp/rss/topics/top-picks.xml',
             lat: 35.6895, lon: 139.6917, cityName: '', 
             eventName: '', eventDate: '',
-            timerTarget: null, timerTotalMs: 0, nextTask: ''
+            timerTarget: null, timerTotalMs: 0, nextTask: '',
+            forceFHD: true
         };
 
         let config = { ...defaultSettings };
@@ -351,18 +288,34 @@
         let nextNewsFetchTime = 0;
 
         function loadConfig() {
-            const saved = localStorage.getItem('smartDisplaySettingsV11');
+            const saved = localStorage.getItem('smartDisplaySettingsV12');
             if (saved) config = { ...config, ...JSON.parse(saved) };
             applyConfig();
         }
 
-        function saveConfig() { localStorage.setItem('smartDisplaySettingsV11', JSON.stringify(config)); }
+        function saveConfig() { localStorage.setItem('smartDisplaySettingsV12', JSON.stringify(config)); }
+
+        // --- 画面スケーリング処理 (強制FULLHDモード) ---
+        function updateScale() {
+            const container = document.getElementById('app-container');
+            if (config.forceFHD) {
+                document.body.classList.add('force-fhd-mode');
+                // 画面幅か高さに合わせて、1920x1080をはみ出さないように縮小率を計算
+                const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+                container.style.transform = `scale(${scale})`;
+            } else {
+                document.body.classList.remove('force-fhd-mode');
+                container.style.transform = 'none';
+            }
+        }
+        window.addEventListener('resize', updateScale);
 
         function applyConfig() {
             document.documentElement.style.setProperty('--main-color', config.mainColor);
             if (config.bgUrl) document.body.style.backgroundImage = `url('${config.bgUrl}')`;
             else document.body.style.backgroundImage = ''; 
             document.getElementById('weather-title-city').innerText = config.cityName ? `- ${config.cityName}` : '';
+            updateScale(); // スケーリングを反映
         }
 
         async function fetchCityNameFromCoords(lat, lon) {
@@ -426,9 +379,9 @@
             const diff = new Date(config.eventDate).getTime() - Date.now();
             if (diff > 0) {
                 const d = Math.floor(diff / (1000 * 60 * 60 * 24)), h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                content.innerHTML = `<div style="font-size: clamp(1rem, 2vw, 1.2rem); margin-bottom: 15px; color: #ffffff;"><span class="highlight" style="font-size: clamp(1.4rem, 3vw, 1.8rem);">${config.eventName}</span> まで</div><div style="font-size: clamp(2.5rem, 5vw, 3.5rem); font-family: 'WRCCleanBold'; color: #ffffff;">${d} <span style="font-size: clamp(1.2rem, 2vw, 1.5rem); color: #ffffff; font-family: 'GenEiLateGop_v2';">日</span> ${h} <span style="font-size: clamp(1.2rem, 2vw, 1.5rem); color: #ffffff; font-family: 'GenEiLateGop_v2';">時間</span></div>`;
+                content.innerHTML = `<div style="font-size: 1.2rem; margin-bottom: 15px; color: #ffffff;"><span class="highlight" style="font-size: 1.8rem;">${config.eventName}</span> まで</div><div style="font-size: 3.5rem; font-family: 'WRCCleanBold'; color: #ffffff;">${d} <span style="font-size: 1.5rem; color: #ffffff; font-family: 'GenEiLateGop_v2';">日</span> ${h} <span style="font-size: 1.5rem; color: #ffffff; font-family: 'GenEiLateGop_v2';">時間</span></div>`;
             } else {
-                content.innerHTML = `<span class="highlight" style="font-size: clamp(1.5rem, 4vw, 2rem);">${config.eventName}</span><br><span style="font-size: 1.5rem; color: #ffffff;">時間が来ました！</span>`;
+                content.innerHTML = `<span class="highlight" style="font-size: 2rem;">${config.eventName}</span><br><span style="font-size: 1.5rem; color: #ffffff;">時間が来ました！</span>`;
             }
         }
         setInterval(updateCalendar, 1000 * 60 * 60);
@@ -445,7 +398,7 @@
             container.style.visibility = 'visible'; curtain.style.animation = 'none'; void curtain.offsetWidth; curtain.style.animation = 'sweep 1.2s cubic-bezier(0.77, 0, 0.175, 1) forwards';
             setTimeout(() => {
                 if (isStarting) {
-                    container.classList.add('widget-card'); container.style.padding = "1vw 3vw"; container.style.background = ""; container.style.borderColor = ""; container.style.boxShadow = ""; container.style.backdropFilter = ""; title.style.display = 'block'; wrapper.style.opacity = '1';
+                    container.classList.add('widget-card'); container.style.padding = "10px 30px"; container.style.background = ""; container.style.borderColor = ""; container.style.boxShadow = ""; container.style.backdropFilter = ""; title.style.display = 'block'; wrapper.style.opacity = '1';
                 } else {
                     container.style.background = 'transparent'; container.style.borderColor = 'transparent'; container.style.boxShadow = 'none'; container.style.backdropFilter = 'none'; title.style.display = 'none'; wrapper.style.opacity = '0';
                 }
@@ -456,14 +409,8 @@
 
         function setupTimerUIState() {
             const rightPanel = document.getElementById('timer-right'), nextText = document.getElementById('timer-next-text'), container = document.getElementById('timer-display-area');
-            if (config.nextTask && config.nextTask.trim() !== '') { 
-                nextText.innerText = config.nextTask; rightPanel.style.display = 'flex'; 
-                container.classList.add('timer-expanded'); // CSS制御に切り替え
-            } 
-            else { 
-                rightPanel.style.display = 'none'; 
-                container.classList.remove('timer-expanded'); // CSS制御に切り替え
-            }
+            if (config.nextTask && config.nextTask.trim() !== '') { nextText.innerText = config.nextTask; rightPanel.style.display = 'flex'; container.style.width = '700px'; } 
+            else { rightPanel.style.display = 'none'; container.style.width = '350px'; }
         }
 
         function startTimer() {
@@ -557,16 +504,16 @@
             triggerCurtain('weather-widget', () => {
                 const content = document.getElementById('weather-content'), cw = weatherData.current_weather;
                 if (weatherMode === 0) {
-                    content.innerHTML = `<div style="font-size: clamp(1rem, 2vw, 1.5rem); color: #ffffff; margin-bottom: 5px;">現在の天気</div><div style="display: flex; align-items: baseline; justify-content: center; gap: 20px;"><span style="font-size: clamp(3rem, 6vw, 4rem); color: #ffffff;">${cw.temperature}<span style="font-size: clamp(1.5rem, 3vw, 2rem);">°C</span></span><span style="font-size: clamp(1.5rem, 3vw, 2rem); color: #ffffff;">${wCodeToJa(cw.weathercode)}</span></div>`;
+                    content.innerHTML = `<div style="font-size: 1.5rem; color: #ffffff; margin-bottom: 5px;">現在の天気</div><div style="display: flex; align-items: baseline; justify-content: center; gap: 20px;"><span style="font-size: 4rem; color: #ffffff;">${cw.temperature}<span style="font-size: 2rem;">°C</span></span><span style="font-size: 2rem; color: #ffffff;">${wCodeToJa(cw.weathercode)}</span></div>`;
                 } else if (weatherMode === 1) {
-                    let html = `<div style="font-size: clamp(1rem, 2vw, 1.2rem); color: #ffffff; margin-bottom: 10px;">明日から5日間の予報</div><div class="forecast-container">`;
+                    let html = `<div style="font-size: 1.2rem; color: #ffffff; margin-bottom: 10px;">明日から5日間の予報</div><div class="forecast-container">`;
                     for (let i = 1; i <= 5; i++) {
                         if(!weatherData.daily.time[i]) break;
-                        html += `<div class="forecast-item"><span style="font-size: clamp(1rem, 2vw, 1.2rem); color: #ffffff;">${['日', '月', '火', '水', '木', '金', '土'][new Date(weatherData.daily.time[i]).getDay()]}</span><span style="font-size: clamp(1rem, 2vw, 1.2rem); color: #ffffff; margin: 5px 0;">${wCodeToJa(weatherData.daily.weathercode[i]).split(' ')[0]}</span><span style="font-size: clamp(1.2rem, 2.5vw, 1.4rem);"><span style="color:#ff6b6b">${Math.round(weatherData.daily.temperature_2m_max[i])}°</span> / <span style="color:#4dabf7">${Math.round(weatherData.daily.temperature_2m_min[i])}°</span></span></div>`;
+                        html += `<div class="forecast-item"><span style="font-size: 1.2rem; color: #ffffff;">${['日', '月', '火', '水', '木', '金', '土'][new Date(weatherData.daily.time[i]).getDay()]}</span><span style="font-size: 1.2rem; color: #ffffff; margin: 5px 0;">${wCodeToJa(weatherData.daily.weathercode[i]).split(' ')[0]}</span><span style="font-size: 1.4rem;"><span style="color:#ff6b6b">${Math.round(weatherData.daily.temperature_2m_max[i])}°</span> / <span style="color:#4dabf7">${Math.round(weatherData.daily.temperature_2m_min[i])}°</span></span></div>`;
                     }
                     content.innerHTML = html + `</div>`;
                 } else {
-                    content.innerHTML = `<div style="font-size: clamp(1rem, 2vw, 1.5rem); color: #ffffff; margin-bottom: 10px;">気象情報・注意報</div><span style="font-size: clamp(1.5rem, 3vw, 2rem); color: #ffffff;">現在の風速: ${cw.windspeed} km/h</span><br><span style="font-size: clamp(1rem, 2vw, 1.2rem); color: #ffffff;">特別な気象警報は発令されていません</span>`;
+                    content.innerHTML = `<div style="font-size: 1.5rem; color: #ffffff; margin-bottom: 10px;">気象情報・注意報</div><span style="font-size: 2rem; color: #ffffff;">現在の風速: ${cw.windspeed} km/h</span><br><span style="font-size: 1.2rem; color: #ffffff;">特別な気象警報は発令されていません</span>`;
                 }
                 weatherMode = (weatherMode + 1) % 3;
             });
@@ -574,6 +521,7 @@
 
         /* ==================== Settings ==================== */
         function openSettings() {
+            document.getElementById('set-force-fhd').checked = config.forceFHD;
             document.getElementById('set-color').value = config.mainColor; document.getElementById('set-bg-url').value = config.bgUrl || '';
             document.getElementById('set-rss').value = config.rssUrl; document.getElementById('set-lat').value = config.lat; document.getElementById('set-lon').value = config.lon;
             document.getElementById('set-event-name').value = config.eventName || ''; document.getElementById('set-event-date').value = config.eventDate || '';
@@ -582,6 +530,7 @@
         function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; }
         
         async function saveSettings() {
+            config.forceFHD = document.getElementById('set-force-fhd').checked;
             config.mainColor = document.getElementById('set-color').value; config.bgUrl = document.getElementById('set-bg-url').value; config.rssUrl = document.getElementById('set-rss').value; 
             const newLat = parseFloat(document.getElementById('set-lat').value), newLon = parseFloat(document.getElementById('set-lon').value);
             if(config.lat !== newLat || config.lon !== newLon || !config.cityName) {
@@ -591,7 +540,7 @@
             saveConfig(); applyConfig(); closeSettings(); updateCalendar(); fetchWeather().then(cycleWeather); 
             fetchNews().then(cycleNewsLogic); 
         }
-        function resetAll() { if(confirm("初期化しますか？")) { localStorage.removeItem('smartDisplaySettingsV11'); location.reload(); } }
+        function resetAll() { if(confirm("初期化しますか？")) { localStorage.removeItem('smartDisplaySettingsV12'); location.reload(); } }
 
         /* ==================== Initialization ==================== */
         window.onload = async () => {
